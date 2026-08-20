@@ -4,7 +4,7 @@ import { useState } from 'react';
 export default function Home() {
   const [prompt, setPrompt] = useState('');
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState(null);
+  const [result, setResult] = useState<any>(null);
 
   const handleGenerate = async () => {
     if (!prompt) return;
@@ -25,31 +25,27 @@ export default function Home() {
   };
 
   return (
-    <main className="min-h-screen p-8 bg-slate-50 max-w-4xl mx-auto">
-      <h1 className="text-3xl font-bold mb-6 text-slate-800">Generador de Cotizaciones IA</h1>
-      <div className="bg-white p-6 rounded-xl shadow-md mb-8">
-        <textarea
-          className="w-full p-4 border border-slate-300 rounded-lg mb-4 text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          rows={4}
-          placeholder="Ej: Cotizar 3 focos LED..."
-          value={prompt}
-          onChange={(e) => setPrompt(e.target.value)}
-        />
-        <button
-          onClick={handleGenerate}
-          disabled={loading}
-          className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium"
-        >
-          {loading ? 'Generando...' : 'Generar Cotización'}
-        </button>
-      </div>
+    <main style={{ padding: '20px', fontFamily: 'sans-serif', maxWidth: '600px', margin: '0 auto' }}>
+      <h1>Generador de Cotizaciones IA</h1>
+      <textarea
+        style={{ width: '100%', height: '100px', marginBottom: '10px', padding: '10px' }}
+        placeholder="Ej: Cotizar 3 focos LED..."
+        value={prompt}
+        onChange={(e) => setPrompt(e.target.value)}
+      />
+      <br />
+      <button
+        onClick={handleGenerate}
+        disabled={loading}
+        style={{ padding: '10px 20px', backgroundColor: '#0070f3', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}
+      >
+        {loading ? 'Generando...' : 'Generar Cotización'}
+      </button>
 
       {result && (
-        <div className="bg-white p-6 rounded-xl shadow-md">
-          <h2 className="text-xl font-bold mb-4 text-slate-800">Resultado</h2>
-          <pre className="bg-slate-100 p-4 rounded-lg text-slate-800 text-sm overflow-x-auto">
-            {JSON.stringify(result, null, 2)}
-          </pre>
+        <div style={{ marginTop: '20px', padding: '10px', background: '#f0f0f0' }}>
+          <h2>Resultado:</h2>
+          <pre>{JSON.stringify(result, null, 2)}</pre>
         </div>
       )}
     </main>

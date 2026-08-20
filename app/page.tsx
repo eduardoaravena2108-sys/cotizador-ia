@@ -4,7 +4,7 @@ import { useState } from 'react';
 export default function Home() {
   const [prompt, setPrompt] = useState('');
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState(null);
 
   const handleGenerate = async () => {
     if (!prompt) return;
@@ -31,7 +31,7 @@ export default function Home() {
         <textarea
           className="w-full p-4 border border-slate-300 rounded-lg mb-4 text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
           rows={4}
-          placeholder="Ej: Cotizar 3 focos LED a $5.000 c/u..."
+          placeholder="Ej: Cotizar 3 focos LED..."
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
         />

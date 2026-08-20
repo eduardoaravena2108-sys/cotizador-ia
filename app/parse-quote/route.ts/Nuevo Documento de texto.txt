@@ -1,0 +1,65 @@
+import { GoogleGenAI, Type } from '@google/genai';
+import { NextResponse } from 'next/server';
+
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+
+export async function POST(req: Request) {
+  try {
+    const { text } = await req.json();
+
+    if (!text) {
+      return NextResponse.json({ error: 'El texto es requerido' }, { status: 400 });
+    }
+
+    const responseSchema = {
+      type: Type.OBJECT,
+      properties: {
+        items: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              descripcion: { type: Type.STRING },
+              cantidad: { type: Type.NUMBER },
+              precioUnitario: { type: Type.NUMBER },
+            },
+            required: ['descripcion', 'cantidad', 'precioUnitario'],
+          },
+        },
+      },
+      required: ['items'],
+    };
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: `Extrae los elementos de la siguiente solicitud de cotización. Ajusta precios e ítems según la instrucción dada: "${text}"`,
+      config: {
+        responseMimeType: 'application/json',
+        responseSchema: responseSchema,
+        systemInstruction: 'Eres un asistente experto en cotizaciones comerciales. Extrae descripciones precisas, cantidades y precios unitarios en CLP.',
+      },
+    });
+
+    const parsedData = JSON.parse(response.text);
+
+    let totalBruto = 0;
+    const itemsProcesados = parsedData.items.map((item: any) => {
+      const totalItem = item.cantidad * item.precioUnitario;
+      totalBruto += totalItem;
+      return { ...item, total: totalItem };
+    });
+
+    const subtotalNeto = Math.round(totalBruto / 1.19);
+    const iva = totalBruto - subtotalNeto;
+
+    return NextResponse.json({
+      items: itemsProcesados,
+      subtotalNeto,
+      iva,
+      totalBruto,
+    });
+  } catch (error) {
+    console.error('Error procesando cotización:', error);
+    return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
+  }
+}GEMINI_API_KEY=AQ.Ab8RN6KFLRqaX1VfhbYnQsDtoi5pyiDAh25oyl-YRwLvPj7IMQ

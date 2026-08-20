@@ -4,7 +4,7 @@ import { useState } from 'react';
 export default function Home() {
   const [prompt, setPrompt] = useState('');
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState(null);
+  const [result, setResult] = useState<any>(null);
 
   const handleGenerate = async () => {
     if (!prompt) return;
@@ -40,13 +40,14 @@ export default function Home() {
           disabled={loading}
           className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium"
         >
-          {loading ? 'Generando...' : 'Generar Cotizaci¢n'}
+          {loading ? 'Generando...' : 'Generar Cotizaci√≥n'}
         </button>
       </div>
+
       {result && (
         <div className="bg-white p-6 rounded-xl shadow-md">
           <h2 className="text-xl font-bold mb-4 text-slate-800">Resultado</h2>
-          <pre className="bg-slate-100 p-4 rounded-lg text-slate-800 text-sm">
+          <pre className="bg-slate-100 p-4 rounded-lg text-slate-800 text-sm overflow-x-auto">
             {JSON.stringify(result, null, 2)}
           </pre>
         </div>

@@ -9,6 +9,7 @@ export default function Home() {
   const handleGenerate = async () => {
     if (!prompt) return;
     setLoading(true);
+    setResult(null);
     try {
       const res = await fetch('/api/parse-quote', {
         method: 'POST',
@@ -19,31 +20,33 @@ export default function Home() {
       setResult(data);
     } catch (e) {
       console.error(e);
+      setResult({ error: 'Error al conectar con la API' });
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div style={{ backgroundColor: '#f8fafc', minHeight: '100vh', padding: '40px 20px', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
-      <main style={{ maxWidth: '700px', margin: '0 auto' }}>
-        <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: '#1e293b', marginBottom: '24px', textAlign: 'center' }}>
-          Generador de Cotizaciones IA
+    <div style={{ backgroundColor: '#0f172a', minHeight: '100vh', padding: '40px 20px', fontFamily: 'system-ui, sans-serif', color: '#f8fafc' }}>
+      <main style={{ maxWidth: '650px', margin: '0 auto' }}>
+        <h1 style={{ fontSize: '2.2rem', fontWeight: 'bold', marginBottom: '8px', textAlign: 'center', color: '#38bdf8' }}>
+          Cotizador Inteligente IA
         </h1>
-        
-        <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', marginBottom: '24px' }}>
-          <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: '600', color: '#475569', marginBottom: '8px' }}>
-            Ingresa tu requerimiento:
-          </label>
+        <p style={{ textAlign: 'center', color: '#94a3b8', marginBottom: '32px' }}>
+          Ingresa los productos que necesitas y la IA procesará la cotización al instante.
+        </p>
+
+        <div style={{ backgroundColor: '#1e293b', padding: '24px', borderRadius: '12px', border: '1px solid #334155', marginBottom: '24px' }}>
           <textarea
             style={{
               width: '100%',
               height: '110px',
               padding: '12px',
               borderRadius: '8px',
-              border: '1px solid #cbd5e1',
+              border: '1px solid #475569',
+              backgroundColor: '#0f172a',
+              color: '#f8fafc',
               fontSize: '1rem',
-              color: '#1e293b',
               boxSizing: 'border-box',
               outline: 'none',
               resize: 'vertical'
@@ -58,28 +61,27 @@ export default function Home() {
             style={{
               marginTop: '16px',
               width: '100%',
-              padding: '12px',
-              backgroundColor: loading ? '#94a3b8' : '#2563eb',
+              padding: '14px',
+              backgroundColor: loading ? '#64748b' : '#0284c7',
               color: '#ffffff',
               border: 'none',
               borderRadius: '8px',
               fontSize: '1rem',
-              fontWeight: '600',
-              cursor: loading ? 'not-allowed' : 'pointer',
-              transition: 'background-color 0.2s'
+              fontWeight: 'bold',
+              cursor: loading ? 'not-allowed' : 'pointer'
             }}
           >
-            {loading ? 'Generando cotización...' : 'Generar Cotización'}
+            {loading ? 'Consultando IA...' : 'Generar Cotización Reales'}
           </button>
         </div>
 
         {result && (
-          <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}>
-            <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#1e293b', marginBottom: '12px' }}>
-              Resultado:
+          <div style={{ backgroundColor: '#1e293b', padding: '24px', borderRadius: '12px', border: '1px solid #38bdf8' }}>
+            <h2 style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#38bdf8', marginBottom: '12px' }}>
+              Respuesta del Sistema:
             </h2>
-            <pre style={{ backgroundColor: '#f1f5f9', padding: '16px', borderRadius: '8px', color: '#0f172a', fontSize: '0.9rem', overflowX: 'auto' }}>
-              {JSON.stringify(result, null, 2)}
+            <pre style={{ backgroundColor: '#0f172a', padding: '16px', borderRadius: '8px', color: '#e2e8f0', fontSize: '0.9rem', overflowX: 'auto', whiteSpace: 'pre-wrap' }}>
+              {result.resultado || JSON.stringify(result, null, 2)}
             </pre>
           </div>
         )}

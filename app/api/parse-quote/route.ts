@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import { GoogleGenAI } from '@google/genai';
 
 export async function POST(req: Request) {
   try {
@@ -8,16 +7,14 @@ export async function POST(req: Request) {
 
     if (!apiKey) {
       return NextResponse.json(
-        { error: 'Falta la variable GEMINI_API_KEY en Vercel.' },
+        { error: 'No se encontró la variable GEMINI_API_KEY en Vercel.' },
         { status: 400 }
       );
     }
 
-    const ai = new GoogleGenAI({ apiKey });
-
-    const systemInstruction = `
-      Eres un asistente experto en cotizaciones para el mercado de Chile.
-      Analiza el texto ingresado y responde EXCLUSIVAMENTE con un JSON válido estructurado así:
+    const systemPrompt = `
+      Eres un asistente experto en cotizaciones para Chile.
+      Analiza los datos y responde EXCLUSIVAMENTE con un JSON válido estructurado así, sin bloques markdown (\`\`\`json):
       {
         "folio": "CTM-${Math.floor(100000 + Math.random() * 900000)}",
         "fecha": "${new Date().toLocaleDateString('es-CL')}",
@@ -34,35 +31,40 @@ export async function POST(req: Request) {
         "subtotal": 1000,
         "iva": 190,
         "total": 1190,
-        "observaciones": "Valores expresados en Pesos Chilenos (CLP)."
+        "observaciones": "Valores en CLP."
       }
-      Calcula los precios unitarios estimando valores de mercado en CLP si no se especifican.
-      Calcula correctamente el IVA (19%) sobre el subtotal.
+      Ítem a cotizar: ${prompt}
     `;
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-1.5-flash',
-      contents: prompt,
-      config: {
-        systemInstruction,
-        responseMimeType: 'application/json',
-      },
-    });
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: systemPrompt }] }]
+        })
+      }
+    );
 
-    const textResponse = response.text;
-    
-    if (!textResponse) {
-      throw new Error('La IA no devolvió respuesta.');
+    const result = await response.json();
+
+    if (result.error) {
+      return NextResponse.json(
+        { error: `Error de Google: ${result.error.message}` },
+        { status: 400 }
+      );
     }
 
-    const parsedData = JSON.parse(textResponse);
+    const text = result.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    const cleanJson = text.replace(/```json/g, '').replace(/```/g, '').trim();
+    const parsedData = JSON.parse(cleanJson);
 
     return NextResponse.json({ data: parsedData });
 
   } catch (error: any) {
-    console.error('Error en API Cotium:', error);
     return NextResponse.json(
-      { error: `Error en servidor: ${error.message}` },
+      { error: `Error en backend: ${error.message}` },
       { status: 500 }
     );
   }

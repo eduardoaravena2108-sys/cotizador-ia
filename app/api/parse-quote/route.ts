@@ -7,14 +7,16 @@ export async function POST(req: Request) {
 
     if (!apiKey) {
       return NextResponse.json(
-        { error: 'No se encontró la variable GEMINI_API_KEY en Vercel.' },
+        { error: 'No se detecta GEMINI_API_KEY en las variables de Vercel.' },
         { status: 400 }
       );
     }
 
     const systemPrompt = `
-      Eres un asistente experto en cotizaciones para Chile.
-      Analiza los datos y responde EXCLUSIVAMENTE con un JSON válido estructurado así, sin bloques markdown (\`\`\`json):
+      Eres un asistente de cotizaciones para Chile. 
+      Analiza la siguiente solicitud: "${prompt}"
+      
+      Responde EXCLUSIVAMENTE con un objeto JSON sin formato markdown ni comillas triples:
       {
         "folio": "CTM-${Math.floor(100000 + Math.random() * 900000)}",
         "fecha": "${new Date().toLocaleDateString('es-CL')}",
@@ -23,17 +25,16 @@ export async function POST(req: Request) {
         "items": [
           {
             "cantidad": 1,
-            "descripcion": "Nombre del producto",
-            "precioUnitario": 1000,
-            "total": 1000
+            "descripcion": "Descripción del ítem",
+            "precioUnitario": 10000,
+            "total": 10000
           }
         ],
-        "subtotal": 1000,
-        "iva": 190,
-        "total": 1190,
+        "subtotal": 10000,
+        "iva": 1900,
+        "total": 11900,
         "observaciones": "Valores en CLP."
       }
-      Ítem a cotizar: ${prompt}
     `;
 
     const response = await fetch(
@@ -51,20 +52,21 @@ export async function POST(req: Request) {
 
     if (result.error) {
       return NextResponse.json(
-        { error: `Error de Google: ${result.error.message}` },
+        { error: `Google API Error: ${result.error.message}` },
         { status: 400 }
       );
     }
 
-    const text = result.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    const cleanJson = text.replace(/```json/g, '').replace(/```/g, '').trim();
+    const rawText = result.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    const cleanJson = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
+    
     const parsedData = JSON.parse(cleanJson);
 
     return NextResponse.json({ data: parsedData });
 
   } catch (error: any) {
     return NextResponse.json(
-      { error: `Error en backend: ${error.message}` },
+      { error: `Error interno: ${error.message}` },
       { status: 500 }
     );
   }

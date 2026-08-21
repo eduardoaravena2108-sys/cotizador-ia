@@ -10,7 +10,6 @@ export default function Home() {
   const [error, setError] = useState('');
   const [history, setHistory] = useState<any[]>([]);
 
-  // Cargar historial desde LocalStorage al iniciar
   useEffect(() => {
     const saved = localStorage.getItem('cotium_history');
     if (saved) {
@@ -18,7 +17,6 @@ export default function Home() {
     }
   }, []);
 
-  // Guardar historial en LocalStorage al actualizar
   const saveHistory = (newHistory: any[]) => {
     setHistory(newHistory);
     localStorage.setItem('cotium_history', JSON.stringify(newHistory));
@@ -41,7 +39,6 @@ export default function Home() {
         setQuote(updatedQuote);
         setPrompt('');
 
-        // Actualizar o añadir al historial
         const existingIdx = history.findIndex((h) => h.folio === updatedQuote.folio);
         let updatedHistory = [...history];
         if (existingIdx >= 0) {
@@ -70,7 +67,6 @@ export default function Home() {
     const newQuote = { ...quote, items: updated, subtotal, iva, total: subtotal + iva };
     setQuote(newQuote);
 
-    // Actualizar también en el historial
     const updatedHistory = history.map((h) => (h.folio === newQuote.folio ? newQuote : h));
     saveHistory(updatedHistory);
   };
@@ -107,12 +103,17 @@ export default function Home() {
       `}</style>
 
       <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-12 gap-6">
-        {/* PANEL IZQUIERDO: FORMULARIO E HISTORIAL */}
+        {/* PANEL IZQUIERDO */}
         <div className="no-print md:col-span-4 space-y-6">
           <div className="bg-zinc-900/90 border border-zinc-800 p-6 rounded-2xl shadow-lg">
-            <h2 className="text-xs font-bold uppercase text-emerald-400 tracking-widest mb-6 pb-2 border-b border-zinc-800">
-              📊 Emisión de Cotización
-            </h2>
+            <div className="flex items-center gap-3 mb-6 pb-4 border-b border-zinc-800">
+              <img src="/logo.png" alt="Cotium SPA Logo" className="w-12 h-12 object-contain" />
+              <div>
+                <h2 className="text-sm font-bold text-white tracking-wider">COTIUM SPA</h2>
+                <p className="text-[10px] text-emerald-400 font-mono">SISTEMA DE COTIZACIÓN</p>
+              </div>
+            </div>
+
             <div className="space-y-4 text-xs">
               <div>
                 <label className="block text-zinc-400 mb-1 font-semibold">Empresa Emisora</label>
@@ -138,7 +139,7 @@ export default function Home() {
             </div>
           </div>
 
-          {/* HISTORIAL DE COTIZACIONES */}
+          {/* HISTORIAL */}
           <div className="bg-zinc-900/90 border border-zinc-800 p-6 rounded-2xl shadow-lg">
             <h3 className="text-xs font-bold uppercase text-zinc-400 tracking-widest mb-4 pb-2 border-b border-zinc-800 flex justify-between items-center">
               <span>📁 Historial Guardado</span>
@@ -176,18 +177,21 @@ export default function Home() {
           </div>
         </div>
 
-        {/* PANEL DERECHO: VISTA PREVIA Y DOCUMENTO */}
+        {/* VISTA PREVIA DEL DOCUMENTO */}
         <div className="md:col-span-8">
           {quote ? (
             <div className="print-area bg-zinc-900 border border-zinc-800 p-8 rounded-2xl shadow-xl">
               <div className="flex justify-between items-start border-b border-zinc-800 pb-6 mb-6">
-                <div>
-                  <h1 className="text-2xl font-bold text-white">{quote.empresa}</h1>
-                  <p className="text-xs text-emerald-400 font-semibold uppercase tracking-wider mt-1">Documento Comercial</p>
+                <div className="flex items-center gap-4">
+                  <img src="/logo.png" alt="Cotium SPA Logo" className="w-16 h-16 object-contain" />
+                  <div>
+                    <h1 className="text-2xl font-bold text-white tracking-wide">{quote.empresa}</h1>
+                    <p className="text-xs text-emerald-400 font-semibold uppercase tracking-wider mt-0.5">Documento Comercial Oficial</p>
+                  </div>
                 </div>
                 <div className="text-right text-xs">
                   <p className="font-bold text-zinc-200">FOLIO: {quote.folio}</p>
-                  <p className="text-zinc-500">{quote.fecha}</p>
+                  <p className="text-zinc-500 mt-1">{quote.fecha}</p>
                 </div>
               </div>
               <div className="bg-zinc-950/60 p-4 rounded-xl border border-zinc-800/80 mb-6 text-xs">

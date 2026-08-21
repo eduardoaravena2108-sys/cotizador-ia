@@ -1,6 +1,9 @@
 'use client';
 import { useState, useEffect } from 'react';
 
+// Logo COTIUM SPA incrustado en la app
+const LOGO_BASE64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
+
 export default function Home() {
   const [empresa, setEmpresa] = useState('COTIUM SPA');
   const [cliente, setCliente] = useState('Cliente General / Empresa');
@@ -107,7 +110,7 @@ export default function Home() {
         <div className="no-print md:col-span-4 space-y-6">
           <div className="bg-zinc-900/90 border border-zinc-800 p-6 rounded-2xl shadow-lg">
             <div className="flex items-center gap-3 mb-6 pb-4 border-b border-zinc-800">
-              <img src="./logo.png" alt="Cotium SPA Logo" className="w-12 h-12 object-contain" />
+              <img src="/logo.png" alt="Cotium SPA Logo" className="w-12 h-12 object-contain" onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }} />
               <div>
                 <h2 className="text-sm font-bold text-white tracking-wider">COTIUM SPA</h2>
                 <p className="text-[10px] text-emerald-400 font-mono">SISTEMA DE COTIZACIÓN</p>
@@ -183,7 +186,7 @@ export default function Home() {
             <div className="print-area bg-zinc-900 border border-zinc-800 p-8 rounded-2xl shadow-xl">
               <div className="flex justify-between items-start border-b border-zinc-800 pb-6 mb-6">
                 <div className="flex items-center gap-4">
-                  <img src="/logo.png" alt="Cotium SPA Logo" className="w-16 h-16 object-contain" />
+                  <img src="/logo.png" alt="Cotium SPA Logo" className="w-16 h-16 object-contain" onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }} />
                   <div>
                     <h1 className="text-2xl font-bold text-white tracking-wide">{quote.empresa}</h1>
                     <p className="text-xs text-emerald-400 font-semibold uppercase tracking-wider mt-0.5">Documento Comercial Oficial</p>

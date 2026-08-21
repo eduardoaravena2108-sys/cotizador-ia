@@ -2,225 +2,214 @@
 import { useState } from 'react';
 
 export default function Home() {
+  const [empresa, setEmpresa] = useState('COTIUM SPA');
+  const [cliente, setCliente] = useState('Cliente General / Empresa');
   const [prompt, setPrompt] = useState('');
-  const [companyName, setCompanyName] = useState('COTIUM SPA');
-  const [clientName, setClientName] = useState('Cliente General / Empresa');
+  const [quote, setQuote] = useState<any>(null);
   const [loading, setLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState('');
-  const [quoteData, setQuoteData] = useState<any>(null);
+  const [error, setError] = useState('');
 
-  const handleGenerate = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
+  const handleGenerate = async () => {
     if (!prompt.trim()) return;
-
     setLoading(true);
-    setErrorMessage('');
+    setError('');
 
     try {
       const res = await fetch('/api/parse-quote', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt, cliente: clientName, empresa: companyName }),
+        body: JSON.stringify({
+          prompt,
+          cliente,
+          empresa,
+          existingItems: quote?.items || []
+        }),
       });
 
       const data = await res.json();
 
-      if (!res.ok || data.error) {
-        throw new Error(data.error || `Error ${res.status}`);
-      }
-
-      if (data.data) {
-        setQuoteData(data.data);
+      if (data.error) {
+        setError(data.error);
       } else {
-        setErrorMessage('La respuesta no contiene datos válidos.');
+        setQuote(data.data);
+        setPrompt(''); // Limpiar el input para el siguiente ítem
       }
-    } catch (e: any) {
-      console.error('Error al generar:', e);
-      setErrorMessage(e.message || 'Ocurrió un error al conectar con la IA.');
+    } catch (err: any) {
+      setError('Error al procesar la solicitud.');
     } finally {
       setLoading(false);
     }
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleGenerate();
+    }
+  };
+
   return (
-    <div style={{ backgroundColor: '#F1F5F9', minHeight: '100vh', fontFamily: 'Inter, system-ui, sans-serif' }}>
-      
-      {/* Navbar Superior Cotium */}
-      <header className="no-print" style={{ backgroundColor: '#0F172A', color: '#FFF', padding: '16px 32px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{ width: '36px', height: '36px', borderRadius: '8px', backgroundColor: '#0284C7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '1.2rem', color: '#FFF' }}>C</div>
-          <div>
-            <span style={{ fontSize: '1.3rem', fontWeight: '800', letterSpacing: '1px', color: '#38BDF8' }}>COTIUM</span>
-            <span style={{ fontSize: '0.75rem', display: 'block', color: '#94A3B8' }}>Motor de Cotizaciones Inteligente</span>
+    <main className="min-h-screen bg-slate-100 p-4 md:p-8 font-sans">
+      {/* Estilos para que al imprimir sólo salga la cotización limpia */}
+      <style jsx global>{`
+        @media print {
+          body { background: white !important; color: black !important; }
+          .no-print { display: none !important; }
+          .print-area { 
+            box-shadow: none !important; 
+            border: none !important; 
+            width: 100% !important; 
+            margin: 0 !important; 
+            padding: 0 !important; 
+          }
+        }
+      `}</style>
+
+      <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-12 gap-6">
+        
+        {/* Panel Izquierdo: Controles (No se imprime) */}
+        <div className="no-print md:col-span-4 bg-white p-6 rounded-xl shadow-md border border-slate-200">
+          <h2 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
+            ⚙️ Ajustes de Cotización
+          </h2>
+
+          <div className="space-y-4">
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">Empresa / Emisor:</label>
+              <input
+                type="text"
+                value={empresa}
+                onChange={(e) => setEmpresa(e.target.value)}
+                className="w-full p-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">Cliente / Destinatario:</label>
+              <input
+                type="text"
+                value={cliente}
+                onChange={(e) => setCliente(e.target.value)}
+                className="w-full p-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">
+                Agregar Producto / Servicio (Presiona Enter):
+              </label>
+              <textarea
+                rows={3}
+                value={prompt}
+                onKeyDown={handleKeyDown}
+                onChange={(e) => setPrompt(e.target.value)}
+                placeholder="Ej: martillo (por defecto será 1)"
+                className="w-full p-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-none"
+              />
+            </div>
+
+            {error && (
+              <div className="p-3 bg-red-50 text-red-600 rounded-lg text-xs border border-red-200">
+                {error}
+              </div>
+            )}
+
+            <button
+              onClick={handleGenerate}
+              disabled={loading}
+              className="w-full bg-sky-600 hover:bg-sky-700 text-white font-semibold py-2.5 px-4 rounded-lg text-sm transition-all shadow-sm disabled:opacity-50"
+            >
+              {loading ? 'Procesando...' : '✨ Agregar a la Cotización'}
+            </button>
+
+            {quote && (
+              <button
+                onClick={() => window.print()}
+                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2.5 px-4 rounded-lg text-sm transition-all shadow-sm flex items-center justify-center gap-2"
+              >
+                🖨️ Descargar / Imprimir PDF
+              </button>
+            )}
           </div>
         </div>
-        <div style={{ fontSize: '0.85rem', color: '#94A3B8' }}>Panel SaaS Profesional</div>
-      </header>
 
-      <div style={{ maxWidth: '1200px', margin: '32px auto', padding: '0 16px', display: 'grid', gridTemplateColumns: '360px 1fr', gap: '32px' }}>
-        
-        {/* Panel Izquierdo: Formularios */}
-        <form onSubmit={handleGenerate} className="no-print" style={{ backgroundColor: '#FFFFFF', padding: '24px', borderRadius: '12px', border: '1px solid #E2E8F0', height: 'fit-content', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-          <h2 style={{ fontSize: '1.05rem', fontWeight: '700', color: '#0F172A', marginBottom: '16px' }}>⚙️ Ajustes de Cotización</h2>
-          
-          <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '600', color: '#475569', marginBottom: '6px' }}>Nombre de tu Emisor / Empresa:</label>
-          <input
-            type="text"
-            value={companyName}
-            onChange={(e) => setCompanyName(e.target.value)}
-            style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #CBD5E1', marginBottom: '16px', fontSize: '0.9rem', boxSizing: 'border-box' }}
-          />
-
-          <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '600', color: '#475569', marginBottom: '6px' }}>Nombre del Cliente:</label>
-          <input
-            type="text"
-            value={clientName}
-            onChange={(e) => setClientName(e.target.value)}
-            style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #CBD5E1', marginBottom: '16px', fontSize: '0.9rem', boxSizing: 'border-box' }}
-          />
-
-          <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '600', color: '#475569', marginBottom: '6px' }}>Detalle o lista de productos:</label>
-          <textarea
-            rows={4}
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                handleGenerate();
-              }
-            }}
-            placeholder="Ej: 5 focos led 18w (Presiona Enter para procesar)"
-            style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #CBD5E1', marginBottom: '16px', fontSize: '0.9rem', boxSizing: 'border-box', resize: 'vertical' }}
-          />
-
-          {errorMessage && (
-            <div style={{ padding: '10px', borderRadius: '6px', backgroundColor: '#FEE2E2', color: '#DC2626', fontSize: '0.8rem', marginBottom: '16px' }}>
-              {errorMessage}
-            </div>
-          )}
-
-          <button
-            type="submit"
-            disabled={loading || !prompt.trim()}
-            style={{
-              width: '100%',
-              backgroundColor: loading ? '#94A3B8' : '#0284C7',
-              color: '#FFF',
-              border: 'none',
-              borderRadius: '6px',
-              padding: '12px',
-              fontWeight: '600',
-              fontSize: '0.95rem',
-              cursor: loading || !prompt.trim() ? 'not-allowed' : 'pointer',
-              marginBottom: '12px'
-            }}
-          >
-            {loading ? 'Procesando con Cotium IA...' : '✨ Cotizar con Cotium'}
-          </button>
-
-          {quoteData && (
-            <button
-              type="button"
-              onClick={() => window.print()}
-              style={{
-                width: '100%',
-                backgroundColor: '#10B981',
-                color: '#FFF',
-                border: 'none',
-                borderRadius: '6px',
-                padding: '12px',
-                fontWeight: '600',
-                fontSize: '0.95rem',
-                cursor: 'pointer'
-              }}
-            >
-              📥 Guardar / Imprimir PDF Oficial
-            </button>
-          )}
-        </form>
-
-        {/* Panel Derecho: Visor A4 */}
-        <div>
-          {quoteData ? (
-            <div style={{ backgroundColor: '#FFFFFF', padding: '48px', borderRadius: '8px', border: '1px solid #CBD5E1', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }}>
+        {/* Panel Derecho: Vista Previa / Documento Formal */}
+        <div className="md:col-span-8">
+          {quote ? (
+            <div className="print-area bg-white p-8 rounded-xl shadow-lg border border-slate-200 text-slate-800">
               
-              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '3px solid #0F172A', paddingBottom: '20px', marginBottom: '24px' }}>
+              {/* Encabezado */}
+              <div className="flex justify-between items-start border-b-2 border-slate-800 pb-6 mb-6">
                 <div>
-                  <h1 style={{ fontSize: '1.8rem', fontWeight: '800', color: '#0F172A', margin: 0, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{companyName}</h1>
-                  <p style={{ fontSize: '0.85rem', color: '#0284C7', margin: '4px 0 0 0', fontWeight: '600' }}>PLATAFORMA COTIUM - DOCUMENTO OFICIAL</p>
+                  <h1 className="text-2xl font-black text-slate-900 tracking-tight">{quote.empresa}</h1>
+                  <p className="text-xs text-slate-500 uppercase font-bold tracking-wider mt-1">Cotización de Servicios y Productos</p>
                 </div>
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: '1.2rem', fontWeight: '700', color: '#0284C7' }}>COTIZACIÓN</div>
-                  <div style={{ fontSize: '0.85rem', color: '#475569', marginTop: '4px' }}><b>FOLIO:</b> {quoteData.folio}</div>
-                  <div style={{ fontSize: '0.85rem', color: '#475569' }}><b>FECHA:</b> {quoteData.fecha}</div>
+                <div className="text-right">
+                  <span className="text-lg font-bold text-sky-700">COTIZACIÓN</span>
+                  <p className="text-xs text-slate-600 font-medium">FOLIO: {quote.folio}</p>
+                  <p className="text-xs text-slate-600 font-medium">FECHA: {quote.fecha}</p>
                 </div>
               </div>
 
-              <div style={{ marginBottom: '24px', backgroundColor: '#F8FAFC', padding: '16px', borderRadius: '6px', border: '1px solid #E2E8F0' }}>
-                <span style={{ fontSize: '0.75rem', fontWeight: '700', color: '#64748B', textTransform: 'uppercase' }}>CLIENTE / DESTINATARIO:</span>
-                <div style={{ fontSize: '1rem', fontWeight: '600', color: '#1E293B', marginTop: '2px' }}>{quoteData.cliente}</div>
+              {/* Datos Cliente */}
+              <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 mb-6">
+                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">Cliente / Destinatario:</span>
+                <p className="text-base font-semibold text-slate-800">{quote.cliente}</p>
               </div>
 
-              <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '24px' }}>
+              {/* Tabla de Productos */}
+              <table className="w-full text-left border-collapse mb-6">
                 <thead>
-                  <tr style={{ backgroundColor: '#0F172A', color: '#FFFFFF', textAlign: 'left', fontSize: '0.85rem' }}>
-                    <th style={{ padding: '10px 12px' }}>CANT.</th>
-                    <th style={{ padding: '10px 12px' }}>DESCRIPCIÓN</th>
-                    <th style={{ padding: '10px 12px' }}>P. UNITARIO</th>
-                    <th style={{ padding: '10px 12px', textAlign: 'right' }}>TOTAL</th>
+                  <tr className="bg-slate-900 text-white text-xs font-bold uppercase tracking-wider">
+                    <th className="p-3 text-center w-16">CANT.</th>
+                    <th className="p-3">DESCRIPCIÓN</th>
+                    <th className="p-3 text-right w-32">P. UNITARIO</th>
+                    <th className="p-3 text-right w-32">TOTAL</th>
                   </tr>
                 </thead>
-                <tbody>
-                  {quoteData.items?.map((item: any, idx: number) => (
-                    <tr key={idx} style={{ borderBottom: '1px solid #E2E8F0', fontSize: '0.9rem' }}>
-                      <td style={{ padding: '12px', fontWeight: '700', color: '#0284C7' }}>{item.cantidad}</td>
-                      <td style={{ padding: '12px', color: '#334155' }}>{item.descripcion}</td>
-                      <td style={{ padding: '12px', color: '#475569' }}>${(item.precioUnitario || 0).toLocaleString('es-CL')}</td>
-                      <td style={{ padding: '12px', textAlign: 'right', fontWeight: '700', color: '#0F172A' }}>${(item.total || 0).toLocaleString('es-CL')}</td>
+                <tbody className="divide-y divide-slate-200 text-sm">
+                  {quote.items.map((item: any, index: number) => (
+                    <tr key={index} className="hover:bg-slate-50">
+                      <td className="p-3 text-center font-bold text-sky-700">{item.cantidad}</td>
+                      <td className="p-3 text-slate-700">{item.descripcion}</td>
+                      <td className="p-3 text-right">${item.precioUnitario.toLocaleString('es-CL')}</td>
+                      <td className="p-3 text-right font-semibold">${(item.cantidad * item.precioUnitario).toLocaleString('es-CL')}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '2px solid #E2E8F0', paddingTop: '16px' }}>
-                <div style={{ maxWidth: '300px', fontSize: '0.8rem', color: '#64748B' }}>
-                  <b>Notas Técnicas:</b> {quoteData.observaciones}
+              {/* Totales */}
+              <div className="flex justify-between items-end border-t border-slate-200 pt-4">
+                <div className="text-xs text-slate-500 max-w-xs">
+                  <p className="font-semibold text-slate-600">Notas:</p>
+                  <p>{quote.observaciones}</p>
                 </div>
-                <div style={{ width: '220px', textAlign: 'right', fontSize: '0.9rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', color: '#475569' }}>
+                <div className="w-64 space-y-2 text-sm">
+                  <div className="flex justify-between text-slate-600">
                     <span>Subtotal:</span>
-                    <span>${(quoteData.subtotal || 0).toLocaleString('es-CL')}</span>
+                    <span>${quote.subtotal.toLocaleString('es-CL')}</span>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', color: '#475569' }}>
+                  <div className="flex justify-between text-slate-600">
                     <span>19% IVA:</span>
-                    <span>${(quoteData.iva || 0).toLocaleString('es-CL')}</span>
+                    <span>${quote.iva.toLocaleString('es-CL')}</span>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderTop: '1px solid #CBD5E1', marginTop: '6px', fontSize: '1.15rem', fontWeight: '800', color: '#0284C7' }}>
+                  <div className="flex justify-between text-lg font-black text-slate-900 border-t border-slate-300 pt-2">
                     <span>TOTAL:</span>
-                    <span>${(quoteData.total || 0).toLocaleString('es-CL')} CLP</span>
+                    <span className="text-sky-700">${quote.total.toLocaleString('es-CL')} CLP</span>
                   </div>
                 </div>
               </div>
 
             </div>
           ) : (
-            <div style={{ backgroundColor: '#FFFFFF', padding: '64px', borderRadius: '8px', border: '1px dashed #CBD5E1', textAlign: 'center', color: '#94A3B8' }}>
-              <div style={{ fontSize: '2.5rem', marginBottom: '12px' }}>⚡</div>
-              <h3 style={{ fontSize: '1.2rem', color: '#475569', margin: '0 0 8px 0', fontWeight: '700' }}>Visor de Documentos Cotium</h3>
-              <p style={{ fontSize: '0.9rem', margin: 0 }}>Ingresa la lista de productos y presiona **Enter** para generar la cotización.</p>
+            <div className="bg-white p-12 rounded-xl shadow-md border border-slate-200 text-center text-slate-400">
+              <p className="text-base font-medium">Ingresa un producto en el panel izquierdo para generar la cotización.</p>
             </div>
           )}
         </div>
 
       </div>
-
-      <style jsx global>{`
-        @media print {
-          .no-print { display: none !important; }
-          body { background-color: white !important; }
-        }
-      `}</style>
-    </div>
+    </main>
   );
 }

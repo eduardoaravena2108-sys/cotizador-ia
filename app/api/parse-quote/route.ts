@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 
 export async function POST(req: Request) {
   try {
-    const { prompt, cliente, empresa } = await req.json();
     const apiKey = process.env.GEMINI_API_KEY;
 
     if (!apiKey) {
@@ -12,78 +11,25 @@ export async function POST(req: Request) {
       );
     }
 
-    const systemPrompt = `
-      Eres un asistente de cotizaciones para Chile.
-      Analiza la siguiente solicitud: "${prompt}"
-      
-      Responde EXCLUSIVAMENTE con un objeto JSON sin formato markdown ni comillas triples:
-      {
-        "folio": "CTM-${Math.floor(100000 + Math.random() * 900000)}",
-        "fecha": "${new Date().toLocaleDateString('es-CL')}",
-        "cliente": "${cliente || 'Cliente General'}",
-        "empresa": "${empresa || 'COTIUM SPA'}",
-        "items": [
-          {
-            "cantidad": 1,
-            "descripcion": "Descripción del ítem",
-            "precioUnitario": 10000,
-            "total": 10000
-          }
-        ],
-        "subtotal": 10000,
-        "iva": 1900,
-        "total": 11900,
-        "observaciones": "Valores en CLP."
-      }
-    `;
+    // Consulta directa a la API de Google para listar tus modelos activos
+    const resV1Beta = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+    const dataV1Beta = await resV1Beta.json();
 
-    // Probamos primero con el modelo estándar sin sufijo extra
-    let response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: systemPrompt }] }]
-        })
-      }
-    );
-
-    let result = await response.json();
-
-    // Si gemini-2.5-flash no está activo en tu cuenta, intenta con gemini-1.5-flash
-    if (result.error && result.error.code === 404) {
-      response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: systemPrompt }] }]
-          })
-        }
-      );
-      result = await response.json();
+    if (dataV1Beta.error) {
+      return NextResponse.json({ error: dataV1Beta.error.message }, { status: 400 });
     }
 
-    if (result.error) {
-      return NextResponse.json(
-        { error: `Google API Error: ${result.error.message}` },
-        { status: 400 }
-      );
-    }
+    // Filtramos solo los modelos que soportan generateContent
+    const validModels = (dataV1Beta.models || [])
+      .filter((m: any) => m.supportedGenerationMethods?.includes('generateContent'))
+      .map((m: any) => m.name.replace('models/', ''));
 
-    const rawText = result.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    const cleanJson = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
-    
-    const parsedData = JSON.parse(cleanJson);
-
-    return NextResponse.json({ data: parsedData });
+    return NextResponse.json({ 
+      mensaje: "Modelos disponibles para tu API Key:",
+      modelosDisponibles: validModels 
+    });
 
   } catch (error: any) {
-    return NextResponse.json(
-      { error: `Error interno: ${error.message}` },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

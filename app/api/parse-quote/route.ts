@@ -13,7 +13,6 @@ export async function POST(req: Request) {
       );
     }
 
-    // Inicializar cliente oficial de Google Gen AI
     const ai = new GoogleGenAI({ apiKey });
 
     const systemInstruction = `
@@ -38,11 +37,11 @@ export async function POST(req: Request) {
         "observaciones": "Valores expresados en Pesos Chilenos (CLP)."
       }
       Calcula los precios unitarios estimando valores de mercado en CLP si no se especifican.
-      Asegúrate de calcular correctamente el IVA (19%) sobre el subtotal.
+      Calcula correctamente el IVA (19%) sobre el subtotal.
     `;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-1.5-flash',
       contents: prompt,
       config: {
         systemInstruction,

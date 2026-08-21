@@ -7,31 +7,11 @@ export async function POST(req: Request) {
 
     if (!apiKey) {
       return NextResponse.json(
-        { error: 'No se detecta GEMINI_API_KEY en Vercel.' },
+        { error: 'No se detecta GEMINI_API_KEY en las variables de Vercel.' },
         { status: 400 }
       );
     }
 
-    // 1. Obtener automáticamente el modelo disponible de la cuenta
-    const modelsResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
-    const modelsData = await modelsResponse.json();
-
-    if (modelsData.error) {
-      return NextResponse.json(
-        { error: `Google API Error: ${modelsData.error.message}` },
-        { status: 400 }
-      );
-    }
-
-    // Filtramos un modelo compatible con generación de contenido
-    const availableModel = modelsData.models?.find((m: any) => 
-      m.supportedGenerationMethods?.includes('generateContent') &&
-      (m.name.includes('flash') || m.name.includes('pro'))
-    )?.name;
-
-    const modelName = availableModel ? availableModel.replace('models/', '') : 'gemini-1.5-flash';
-
-    // 2. Generar la cotización usando el modelo detectado
     const systemPrompt = `
       Eres un asistente de cotizaciones para Chile.
       Analiza la siguiente solicitud: "${prompt}"
@@ -44,21 +24,22 @@ export async function POST(req: Request) {
         "empresa": "${empresa || 'COTIUM SPA'}",
         "items": [
           {
-            "cantidad": 10,
-            "descripcion": "Ampolleta LED 18W",
-            "precioUnitario": 2500,
-            "total": 25000
+            "cantidad": 5,
+            "descripcion": "Foco LED 19W",
+            "precioUnitario": 3500,
+            "total": 17500
           }
         ],
-        "subtotal": 25000,
-        "iva": 4750,
-        "total": 29750,
+        "subtotal": 17500,
+        "iva": 3325,
+        "total": 20825,
         "observaciones": "Valores expresados en Pesos Chilenos (CLP)."
       }
     `;
 
-    const generateResponse = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`,
+    // 1. Intentar primero con el modelo que exige tu API Key: gemini-3.6-flash
+    let response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${apiKey}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -68,7 +49,31 @@ export async function POST(req: Request) {
       }
     );
 
-    const result = await generateResponse.json();
+    let result = await response.json();
+
+    // 2. Si falla por modelo, obtener automáticamente los modelos activos de la cuenta
+    if (result.error) {
+      const modelsRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+      const modelsData = await modelsRes.json();
+      
+      const activeModel = modelsData.models?.find((m: any) => 
+        m.supportedGenerationMethods?.includes('generateContent')
+      )?.name;
+
+      if (activeModel) {
+        response = await fetch(
+          `https://generativelanguage.googleapis.com/${activeModel}:generateContent?key=${apiKey}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: systemPrompt }] }]
+            })
+          }
+        );
+        result = await response.json();
+      }
+    }
 
     if (result.error) {
       return NextResponse.json(
@@ -79,7 +84,6 @@ export async function POST(req: Request) {
 
     const rawText = result.candidates?.[0]?.content?.parts?.[0]?.text || '';
     const cleanJson = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
-    
     const parsedData = JSON.parse(cleanJson);
 
     return NextResponse.json({ data: parsedData });

@@ -37,7 +37,7 @@ export async function POST(req: Request) {
       }
     `;
 
-    // Se actualiza el nombre del modelo a gemini-2.5-flash o gemini-1.5-flash-latest
+    // Endpoint actualizado a la versión estable actual gemini-2.5-flash
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
       {

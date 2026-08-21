@@ -107,7 +107,7 @@ export default function Home() {
         <div className="no-print md:col-span-4 space-y-6">
           <div className="bg-zinc-900/90 border border-zinc-800 p-6 rounded-2xl shadow-lg">
             <div className="flex items-center gap-3 mb-6 pb-4 border-b border-zinc-800">
-              <img src="/logo.png" alt="Cotium SPA Logo" className="w-12 h-12 object-contain" />
+              <img src="./logo.png" alt="Cotium SPA Logo" className="w-12 h-12 object-contain" />
               <div>
                 <h2 className="text-sm font-bold text-white tracking-wider">COTIUM SPA</h2>
                 <p className="text-[10px] text-emerald-400 font-mono">SISTEMA DE COTIZACIÓN</p>

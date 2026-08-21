@@ -6,23 +6,36 @@ export default function Home() {
   const [companyName, setCompanyName] = useState('COTIUM SPA');
   const [clientName, setClientName] = useState('Cliente General / Empresa');
   const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
   const [quoteData, setQuoteData] = useState<any>(null);
 
-  const handleGenerate = async () => {
+  const handleGenerate = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     if (!prompt.trim()) return;
+
     setLoading(true);
+    setErrorMessage('');
+
     try {
       const res = await fetch('/api/parse-quote', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt, cliente: clientName, empresa: companyName }),
       });
+
+      if (!res.ok) {
+        throw new Error(`Error en el servidor: ${res.status}`);
+      }
+
       const data = await res.json();
       if (data.data) {
         setQuoteData(data.data);
+      } else {
+        setErrorMessage('La respuesta no contiene datos válidos.');
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error('Error al generar:', e);
+      setErrorMessage('Ocurrió un error al conectar con la IA. Revisa tu clave de API en Vercel.');
     } finally {
       setLoading(false);
     }
@@ -45,8 +58,8 @@ export default function Home() {
 
       <div style={{ maxWidth: '1200px', margin: '32px auto', padding: '0 16px', display: 'grid', gridTemplateColumns: '360px 1fr', gap: '32px' }}>
         
-        {/* Panel Izquierdo: Formularios y Controles */}
-        <div className="no-print" style={{ backgroundColor: '#FFFFFF', padding: '24px', borderRadius: '12px', border: '1px solid #E2E8F0', height: 'fit-content', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+        {/* Panel Izquierdo: Formularios con captura de ENTER */}
+        <form onSubmit={handleGenerate} className="no-print" style={{ backgroundColor: '#FFFFFF', padding: '24px', borderRadius: '12px', border: '1px solid #E2E8F0', height: 'fit-content', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
           <h2 style={{ fontSize: '1.05rem', fontWeight: '700', color: '#0F172A', marginBottom: '16px' }}>⚙️ Ajustes de Cotización</h2>
           
           <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '600', color: '#475569', marginBottom: '6px' }}>Nombre de tu Emisor / Empresa:</label>
@@ -70,23 +83,35 @@ export default function Home() {
             rows={4}
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
-            placeholder="Ej: 10 focos led 18w, 3 rollos de cable 2.5mm y servicio de instalación"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleGenerate();
+              }
+            }}
+            placeholder="Ej: 10 focos led 18w, 3 rollos de cable 2.5mm (Presiona Enter para procesar)"
             style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #CBD5E1', marginBottom: '16px', fontSize: '0.9rem', boxSizing: 'border-box', resize: 'vertical' }}
           />
 
+          {errorMessage && (
+            <div style={{ padding: '10px', borderRadius: '6px', backgroundColor: '#FEE2E2', color: '#DC2626', fontSize: '0.8rem', marginBottom: '16px' }}>
+              {errorMessage}
+            </div>
+          )}
+
           <button
-            onClick={handleGenerate}
-            disabled={loading}
+            type="submit"
+            disabled={loading || !prompt.trim()}
             style={{
               width: '100%',
-              backgroundColor: '#0284C7',
+              backgroundColor: loading ? '#94A3B8' : '#0284C7',
               color: '#FFF',
               border: 'none',
               borderRadius: '6px',
               padding: '12px',
               fontWeight: '600',
               fontSize: '0.95rem',
-              cursor: loading ? 'not-allowed' : 'pointer',
+              cursor: loading || !prompt.trim() ? 'not-allowed' : 'pointer',
               marginBottom: '12px'
             }}
           >
@@ -95,6 +120,7 @@ export default function Home() {
 
           {quoteData && (
             <button
+              type="button"
               onClick={() => window.print()}
               style={{
                 width: '100%',
@@ -111,7 +137,7 @@ export default function Home() {
               📥 Guardar / Imprimir PDF Oficial
             </button>
           )}
-        </div>
+        </form>
 
         {/* Panel Derecho: Visor de Hoja A4 Cotium */}
         <div>
@@ -185,7 +211,7 @@ export default function Home() {
             <div style={{ backgroundColor: '#FFFFFF', padding: '64px', borderRadius: '8px', border: '1px dashed #CBD5E1', textAlign: 'center', color: '#94A3B8' }}>
               <div style={{ fontSize: '2.5rem', marginBottom: '12px' }}>⚡</div>
               <h3 style={{ fontSize: '1.2rem', color: '#475569', margin: '0 0 8px 0', fontWeight: '700' }}>Visor de Documentos Cotium</h3>
-              <p style={{ fontSize: '0.9rem', margin: 0 }}>Ingresa la lista de productos para generar la hoja de cotización formal.</p>
+              <p style={{ fontSize: '0.9rem', margin: 0 }}>Ingresa la lista de productos y presiona **Enter** o el botón para generar la cotización.</p>
             </div>
           )}
         </div>

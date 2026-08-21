@@ -11,229 +11,127 @@ export default function Home() {
 
   const handleGenerate = async () => {
     if (!prompt.trim()) return;
-    setLoading(true);
-    setError('');
-
+    setLoading(true); setError('');
     try {
       const res = await fetch('/api/parse-quote', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          prompt,
-          cliente,
-          empresa,
-          existingItems: quote?.items || []
-        }),
+        body: JSON.stringify({ prompt, cliente, empresa, existingItems: quote?.items || [] }),
       });
-
       const data = await res.json();
-
-      if (data.error) {
-        setError(data.error);
-      } else {
-        setQuote(data.data);
-        setPrompt('');
-      }
-    } catch (err: any) {
-      setError('Error al procesar la solicitud.');
-    } finally {
-      setLoading(false);
-    }
+      if (data.error) setError(data.error);
+      else { setQuote(data.data); setPrompt(''); }
+    } catch { setError('Error al procesar la cotización.'); } finally { setLoading(false); }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleGenerate();
-    }
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleGenerate(); }
   };
 
-  const removeItem = (indexToRemove: number) => {
+  const removeItem = (idx: number) => {
     if (!quote) return;
-    const updatedItems = quote.items.filter((_: any, idx: number) => idx !== indexToRemove);
-    const subtotal = updatedItems.reduce((acc: number, item: any) => acc + (item.cantidad * item.precioUnitario), 0);
+    const updated = quote.items.filter((_: any, i: number) => i !== idx);
+    const subtotal = updated.reduce((a: number, b: any) => a + (b.cantidad * b.precioUnitario), 0);
     const iva = Math.round(subtotal * 0.19);
-    const total = subtotal + iva;
-
-    setQuote({
-      ...quote,
-      items: updatedItems,
-      subtotal,
-      iva,
-      total
-    });
+    setQuote({ ...quote, items: updated, subtotal, iva, total: subtotal + iva });
   };
 
   return (
-    <main className="min-h-screen p-4 md:p-8">
+    <main className="min-h-screen bg-zinc-950 text-zinc-200 p-4 md:p-8 font-sans">
       <style jsx global>{`
         @media print {
-          body { background: white !important; }
+          body { background: white !important; color: black !important; }
           .no-print { display: none !important; }
-          .print-area { 
-            box-shadow: none !important; 
-            border: none !important; 
-            width: 100% !important; 
-            margin: 0 !important; 
-            padding: 0 !important; 
-          }
+          .print-area { background: white !important; color: black !important; border: none !important; }
+          .print-area * { color: black !important; border-color: #e4e4e7 !important; }
         }
       `}</style>
-
       <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-12 gap-6">
-        
-        {/* Panel Izquierdo */}
-        <div className="no-print md:col-span-4 bg-white p-6 rounded-xl border border-slate-200 shadow-sm h-fit">
-          <h2 className="text-base font-bold text-slate-900 mb-4 pb-2 border-b border-slate-100">
-            Ajustes de Cotización
+        <div className="no-print md:col-span-4 bg-zinc-900/90 border border-zinc-800 p-6 rounded-2xl shadow-lg">
+          <h2 className="text-xs font-bold uppercase text-emerald-400 tracking-widest mb-6 pb-2 border-b border-zinc-800">
+            📊 Emisión de Cotización
           </h2>
-
-          <div className="space-y-4">
+          <div className="space-y-4 text-xs">
             <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">Emisor / Empresa</label>
-              <input
-                type="text"
-                value={empresa}
-                onChange={(e) => setEmpresa(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 text-sm text-slate-900 focus:bg-white focus:border-slate-800 outline-none transition"
-              />
+              <label className="block text-zinc-400 mb-1 font-semibold">Empresa Emisora</label>
+              <input type="text" value={empresa} onChange={(e) => setEmpresa(e.target.value)} className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2.5 text-zinc-100 outline-none focus:border-emerald-500" />
             </div>
-
             <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">Cliente / Destinatario</label>
-              <input
-                type="text"
-                value={cliente}
-                onChange={(e) => setCliente(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 text-sm text-slate-900 focus:bg-white focus:border-slate-800 outline-none transition"
-              />
+              <label className="block text-zinc-400 mb-1 font-semibold">Cliente</label>
+              <input type="text" value={cliente} onChange={(e) => setCliente(e.target.value)} className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2.5 text-zinc-100 outline-none focus:border-emerald-500" />
             </div>
-
             <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">
-                Añadir Producto o Servicio <span className="text-slate-400 font-normal">(Enter)</span>
-              </label>
-              <textarea
-                rows={3}
-                value={prompt}
-                onKeyDown={handleKeyDown}
-                onChange={(e) => setPrompt(e.target.value)}
-                placeholder="Ej: 5 focos led 19w..."
-                className="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 text-sm text-slate-900 focus:bg-white focus:border-slate-800 outline-none resize-none transition"
-              />
+              <label className="block text-zinc-400 mb-1 font-semibold font-mono">Agregar Ítem (Enter)</label>
+              <textarea rows={3} value={prompt} onKeyDown={handleKeyDown} onChange={(e) => setPrompt(e.target.value)} placeholder="Ej: Servicio de mantenimiento..." className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2.5 text-zinc-100 outline-none resize-none focus:border-emerald-500" />
             </div>
-
-            {error && (
-              <div className="p-3 bg-red-50 border border-red-200 text-red-600 rounded-lg text-xs">
-                {error}
-              </div>
-            )}
-
-            <button
-              onClick={handleGenerate}
-              disabled={loading}
-              className="w-full bg-slate-900 hover:bg-slate-800 text-white font-semibold py-2.5 rounded-lg text-sm transition disabled:opacity-50"
-            >
-              {loading ? 'Generando...' : 'Agregar a la Cotización'}
+            {error && <div className="p-3 bg-red-950/40 text-red-400 rounded-lg border border-red-800/30">{error}</div>}
+            <button onClick={handleGenerate} disabled={loading} className="w-full bg-emerald-600 hover:bg-emerald-500 text-zinc-950 font-bold py-3 rounded-lg transition">
+              {loading ? 'Calculando...' : 'Sumar al Balance'}
             </button>
-
             {quote && (
-              <button
-                onClick={() => window.print()}
-                className="w-full bg-slate-100 hover:bg-slate-200 text-slate-900 font-semibold border border-slate-300 py-2.5 rounded-lg text-sm transition flex items-center justify-center gap-2"
-              >
-                🖨️ Descargar / Imprimir PDF
+              <button onClick={() => window.print()} className="w-full bg-zinc-800 hover:bg-zinc-700 text-zinc-300 py-2.5 rounded-lg border border-zinc-700 font-semibold">
+                🖨️ Generar PDF
               </button>
             )}
           </div>
         </div>
 
-        {/* Panel Derecho */}
         <div className="md:col-span-8">
           {quote ? (
-            <div className="print-area bg-white p-8 md:p-12 rounded-xl border border-slate-200 shadow-sm text-slate-900">
-              
-              {/* Encabezado */}
-              <div className="flex justify-between items-start border-b border-slate-200 pb-6 mb-6">
+            <div className="print-area bg-zinc-900 border border-zinc-800 p-8 rounded-2xl shadow-xl">
+              <div className="flex justify-between items-start border-b border-zinc-800 pb-6 mb-6">
                 <div>
-                  <h1 className="text-2xl font-bold tracking-tight text-slate-900">{quote.empresa}</h1>
-                  <p className="text-xs text-slate-500 font-medium tracking-wide uppercase mt-1">COTIZACIÓN DE SERVICIOS</p>
+                  <h1 className="text-2xl font-bold text-white">{quote.empresa}</h1>
+                  <p className="text-xs text-emerald-400 font-semibold uppercase tracking-wider mt-1">Documento Comercial</p>
                 </div>
-                <div className="text-right">
-                  <p className="text-sm font-bold text-slate-900">N° {quote.folio}</p>
-                  <p className="text-xs text-slate-500 mt-0.5">Fecha: {quote.fecha}</p>
+                <div className="text-right text-xs">
+                  <p className="font-bold text-zinc-200">FOLIO: {quote.folio}</p>
+                  <p className="text-zinc-500">{quote.fecha}</p>
                 </div>
               </div>
-
-              {/* Info Cliente */}
-              <div className="bg-slate-50 p-4 rounded-lg border border-slate-200/60 mb-6">
-                <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Cliente / Destinatario</p>
-                <p className="text-sm font-bold text-slate-800">{quote.cliente}</p>
+              <div className="bg-zinc-950/60 p-4 rounded-xl border border-zinc-800/80 mb-6 text-xs">
+                <span className="text-zinc-500 uppercase block mb-1">Destinatario:</span>
+                <p className="text-sm font-semibold text-zinc-200">{quote.cliente}</p>
               </div>
-
-              {/* Tabla */}
-              <table className="w-full text-left border-collapse mb-8">
+              <table className="w-full text-left border-collapse text-xs mb-6">
                 <thead>
-                  <tr className="border-b border-slate-300 text-xs font-semibold text-slate-500 uppercase">
-                    <th className="py-2 px-2 text-center w-12">Cant.</th>
-                    <th className="py-2 px-2">Descripción</th>
-                    <th className="py-2 px-2 text-right w-28">P. Unitario</th>
-                    <th className="py-2 px-2 text-right w-28">Total</th>
-                    <th className="py-2 px-2 text-center w-8 no-print"></th>
+                  <tr className="border-b border-zinc-800 text-zinc-400 uppercase">
+                    <th className="py-2.5 px-2 text-center">Cant.</th>
+                    <th className="py-2.5 px-2">Descripción</th>
+                    <th className="py-2.5 px-2 text-right">P. Unitario</th>
+                    <th className="py-2.5 px-2 text-right">Total</th>
+                    <th className="py-2.5 px-2 no-print"></th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 text-sm">
-                  {quote.items.map((item: any, index: number) => (
-                    <tr key={index} className="hover:bg-slate-50/50">
-                      <td className="py-3 px-2 text-center font-semibold text-slate-700">{item.cantidad}</td>
-                      <td className="py-3 px-2 text-slate-800">{item.descripcion}</td>
-                      <td className="py-3 px-2 text-right text-slate-600">${item.precioUnitario.toLocaleString('es-CL')}</td>
-                      <td className="py-3 px-2 text-right font-semibold text-slate-900">${(item.cantidad * item.precioUnitario).toLocaleString('es-CL')}</td>
+                <tbody className="divide-y divide-zinc-800/60">
+                  {quote.items.map((item: any, i: number) => (
+                    <tr key={i}>
+                      <td className="py-3 px-2 text-center font-bold text-emerald-400">{item.cantidad}</td>
+                      <td className="py-3 px-2 text-zinc-300">{item.descripcion}</td>
+                      <td className="py-3 px-2 text-right text-zinc-400">${item.precioUnitario.toLocaleString('es-CL')}</td>
+                      <td className="py-3 px-2 text-right font-bold text-white">${(item.cantidad * item.precioUnitario).toLocaleString('es-CL')}</td>
                       <td className="py-3 px-2 text-center no-print">
-                        <button
-                          onClick={() => removeItem(index)}
-                          title="Eliminar"
-                          className="text-slate-300 hover:text-red-600 font-bold text-xs"
-                        >
-                          ✕
-                        </button>
+                        <button onClick={() => removeItem(i)} className="text-zinc-500 hover:text-red-400 font-bold">✕</button>
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-
-              {/* Totales */}
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end border-t border-slate-200 pt-6 gap-6">
-                <div className="text-xs text-slate-500 max-w-sm leading-relaxed">
-                  <p className="font-semibold text-slate-700 mb-0.5">Observaciones</p>
-                  <p>{quote.observaciones}</p>
-                </div>
-
-                <div className="w-full sm:w-56 space-y-1.5 text-sm">
-                  <div className="flex justify-between text-slate-600">
-                    <span>Subtotal</span>
-                    <span>${quote.subtotal.toLocaleString('es-CL')}</span>
-                  </div>
-                  <div className="flex justify-between text-slate-600">
-                    <span>19% IVA</span>
-                    <span>${quote.iva.toLocaleString('es-CL')}</span>
-                  </div>
-                  <div className="flex justify-between text-base font-bold text-slate-900 border-t border-slate-300 pt-2">
-                    <span>Total CLP</span>
-                    <span>${quote.total.toLocaleString('es-CL')}</span>
-                  </div>
+              <div className="flex justify-between items-end border-t border-zinc-800 pt-6 text-xs">
+                <p className="text-zinc-500 max-w-xs">{quote.observaciones}</p>
+                <div className="w-56 space-y-1.5 bg-zinc-950/60 p-4 rounded-xl border border-zinc-800">
+                  <div className="flex justify-between text-zinc-400"><span>Subtotal</span><span>${quote.subtotal.toLocaleString('es-CL')}</span></div>
+                  <div className="flex justify-between text-zinc-400"><span>19% IVA</span><span>${quote.iva.toLocaleString('es-CL')}</span></div>
+                  <div className="flex justify-between font-bold text-emerald-400 text-sm border-t border-zinc-800 pt-1.5"><span>Total CLP</span><span>${quote.total.toLocaleString('es-CL')}</span></div>
                 </div>
               </div>
-
             </div>
           ) : (
-            <div className="bg-white p-12 rounded-xl border border-slate-200 text-center text-slate-400">
-              <p className="text-sm">Ingresa los productos o servicios en el panel para generar el documento.</p>
+            <div className="bg-zinc-900/40 border border-zinc-800 p-12 text-center text-zinc-600 rounded-2xl text-xs">
+              Esperando registros...
             </div>
           )}
         </div>
-
       </div>
     </main>
   );

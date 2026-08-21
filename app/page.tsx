@@ -1,24 +1,12 @@
 'use client';
 import { useState } from 'react';
-import jsPDF from 'jspdf';
-import 'jspdf-autotable';
 
 export default function Home() {
   const [prompt, setPrompt] = useState('');
+  const [companyName, setCompanyName] = useState('COTIUM SPA');
+  const [clientName, setClientName] = useState('Cliente General / Empresa');
   const [loading, setLoading] = useState(false);
-  const [quoteData, setQuoteData] = useState<any>({
-    folio: 'NS-2026-8841',
-    fecha: new Date().toLocaleDateString('es-CL'),
-    cliente: 'Empresa / Solicitante',
-    items: [
-      { cantidad: 10, descripcion: 'Foco LED Panel 18W Empotrable', precioUnitario: 14900, total: 149000 },
-      { cantidad: 1, descripcion: 'Servicio de Inspección y Montaje Técnico', precioUnitario: 45000, total: 45000 }
-    ],
-    subtotal: 194000,
-    iva: 36860,
-    total: 230860,
-    observaciones: 'Documento preliminar generado automáticamente por NetShield Engine v2.0.'
-  });
+  const [quoteData, setQuoteData] = useState<any>(null);
 
   const handleGenerate = async () => {
     if (!prompt.trim()) return;
@@ -27,237 +15,189 @@ export default function Home() {
       const res = await fetch('/api/parse-quote', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt }),
+        body: JSON.stringify({ prompt, cliente: clientName, empresa: companyName }),
       });
       const data = await res.json();
       if (data.data) {
         setQuoteData(data.data);
       }
     } catch (e) {
-      console.error(e);
+      console.error('Error al generar:', e);
     } finally {
       setLoading(false);
     }
   };
 
-  const generatePDF = () => {
-    if (!quoteData) return;
-    const doc = new jsPDF();
-
-    // Encabezado Corporativo Dark
-    doc.setFillColor(15, 23, 42);
-    doc.rect(0, 0, 210, 38, 'F');
-
-    doc.setTextColor(56, 189, 248);
-    doc.setFontSize(20);
-    doc.setFont('helvetica', 'bold');
-    doc.text('NETSHIELD', 14, 20);
-
-    doc.setTextColor(241, 245, 249);
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-    doc.text('SOLUCIONES DE CIBERSEGURIDAD Y PROYECTOS TÉCNICOS', 14, 28);
-
-    // Metadatos
-    doc.setTextColor(30, 41, 59);
-    doc.setFontSize(11);
-    doc.setFont('helvetica', 'bold');
-    doc.text(`COTIZACIÓN N°: ${quoteData.folio}`, 140, 20);
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'normal');
-    doc.text(`Fecha: ${quoteData.fecha}`, 140, 27);
-
-    // Cliente
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'bold');
-    doc.text('INFORMACIÓN DEL CLIENTE:', 14, 48);
-    doc.setFont('helvetica', 'normal');
-    doc.text(`Entidad: ${quoteData.cliente}`, 14, 55);
-
-    // Tabla de Productos
-    const tableRows = quoteData.items.map((item: any) => [
-      item.cantidad,
-      item.descripcion,
-      `$${(item.precioUnitario || 0).toLocaleString('es-CL')}`,
-      `$${(item.total || 0).toLocaleString('es-CL')}`
-    ]);
-
-    (doc as any).autoTable({
-      startY: 62,
-      head: [['Cant.', 'Descripción / Detalle Técnico', 'P. Unitario', 'Total']],
-      body: tableRows,
-      headStyles: { fillColor: [15, 23, 42], textColor: [255, 255, 255], fontStyle: 'bold' },
-      styles: { fontSize: 9, cellPadding: 5 },
-      theme: 'striped'
-    });
-
-    const finalY = (doc as any).lastAutoTable.finalY + 12;
-
-    // Totales
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-    doc.text(`Subtotal:`, 135, finalY);
-    doc.text(`$${(quoteData.subtotal || 0).toLocaleString('es-CL')}`, 170, finalY, { align: 'right' });
-
-    doc.text(`19% IVA:`, 135, finalY + 6);
-    doc.text(`$${(quoteData.iva || 0).toLocaleString('es-CL')}`, 170, finalY + 6, { align: 'right' });
-
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(12);
-    doc.setTextColor(2, 132, 199);
-    doc.text(`TOTAL CLP:`, 135, finalY + 14);
-    doc.text(`$${(quoteData.total || 0).toLocaleString('es-CL')}`, 170, finalY + 14, { align: 'right' });
-
-    // Pie de página
-    doc.setTextColor(100, 116, 139);
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'italic');
-    doc.text(`Notas: ${quoteData.observaciones || 'Documento oficial con validez técnica.'}`, 14, finalY + 30);
-
-    doc.save(`Cotizacion_${quoteData.folio}.pdf`);
-  };
-
   return (
-    <div style={{ backgroundColor: '#0B0F17', minHeight: '100vh', padding: '32px 16px', fontFamily: 'system-ui, sans-serif' }}>
-      {/* Panel Superior de Control */}
-      <div style={{ maxWidth: '850px', margin: '0 auto 24px', backgroundColor: '#161F2E', padding: '20px', borderRadius: '12px', border: '1px solid #233146' }}>
-        <h1 style={{ color: '#38BDF8', fontSize: '1.25rem', fontWeight: 'bold', margin: '0 0 12px 0' }}>
-          🛡️ GENERADOR DE DOCUMENTOS Y COTIZACIONES
-        </h1>
-        <div style={{ display: 'flex', gap: '12px' }}>
+    <div style={{ backgroundColor: '#F1F5F9', minHeight: '100vh', fontFamily: 'Inter, system-ui, sans-serif' }}>
+      
+      {/* Navbar Superior Cotium */}
+      <header className="no-print" style={{ backgroundColor: '#0F172A', color: '#FFF', padding: '16px 32px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{ width: '36px', height: '36px', borderRadius: '8px', backgroundColor: '#0284C7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '1.2rem', color: '#FFF' }}>C</div>
+          <div>
+            <span style={{ fontSize: '1.3rem', fontWeight: '800', letterSpacing: '1px', color: '#38BDF8' }}>COTIUM</span>
+            <span style={{ fontSize: '0.75rem', display: 'block', color: '#94A3B8' }}>Motor de Cotizaciones Inteligente</span>
+          </div>
+        </div>
+        <div style={{ fontSize: '0.85rem', color: '#94A3B8' }}>Panel SaaS Profesional</div>
+      </header>
+
+      <div style={{ maxWidth: '1200px', margin: '32px auto', padding: '0 16px', display: 'grid', gridTemplateColumns: '360px 1fr', gap: '32px' }}>
+        
+        {/* Panel Izquierdo: Formularios y Controles */}
+        <div className="no-print" style={{ backgroundColor: '#FFFFFF', padding: '24px', borderRadius: '12px', border: '1px solid #E2E8F0', height: 'fit-content', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+          <h2 style={{ fontSize: '1.05rem', fontWeight: '700', color: '#0F172A', marginBottom: '16px' }}>⚙️ Ajustes de Cotización</h2>
+          
+          <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '600', color: '#475569', marginBottom: '6px' }}>Nombre de tu Emisor / Empresa:</label>
           <input
             type="text"
-            style={{
-              flex: 1,
-              backgroundColor: '#0B0F17',
-              border: '1px solid #334155',
-              borderRadius: '8px',
-              color: '#F8FAFC',
-              padding: '12px 16px',
-              fontSize: '0.95rem',
-              outline: 'none'
-            }}
-            placeholder="Ej: Cotizar 20 focos LED de 18W y mano de obra..."
+            value={companyName}
+            onChange={(e) => setCompanyName(e.target.value)}
+            style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #CBD5E1', marginBottom: '16px', fontSize: '0.9rem', boxSizing: 'border-box' }}
+          />
+
+          <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '600', color: '#475569', marginBottom: '6px' }}>Nombre del Cliente:</label>
+          <input
+            type="text"
+            value={clientName}
+            onChange={(e) => setClientName(e.target.value)}
+            style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #CBD5E1', marginBottom: '16px', fontSize: '0.9rem', boxSizing: 'border-box' }}
+          />
+
+          <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '600', color: '#475569', marginBottom: '6px' }}>Detalle o lista de productos:</label>
+          <textarea
+            rows={4}
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
+            placeholder="Ej: 10 focos led 18w, 3 rollos de cable 2.5mm y servicio de instalación"
+            style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #CBD5E1', marginBottom: '16px', fontSize: '0.9rem', boxSizing: 'border-box', resize: 'vertical' }}
           />
+
           <button
             onClick={handleGenerate}
             disabled={loading}
             style={{
+              width: '100%',
               backgroundColor: '#0284C7',
               color: '#FFF',
               border: 'none',
-              borderRadius: '8px',
-              padding: '0 24px',
-              fontWeight: 'bold',
-              cursor: loading ? 'not-allowed' : 'pointer'
+              borderRadius: '6px',
+              padding: '12px',
+              fontWeight: '600',
+              fontSize: '0.95rem',
+              cursor: loading ? 'not-allowed' : 'pointer',
+              marginBottom: '12px'
             }}
           >
-            {loading ? 'Procesando...' : 'Actualizar Hoja'}
+            {loading ? 'Procesando con Cotium IA...' : '✨ Cotizar con Cotium'}
           </button>
-        </div>
-      </div>
 
-      {/* VISTA HOJA DOCUMENTO PDF (A4 PREVIEW) */}
-      <div style={{
-        maxWidth: '850px',
-        margin: '0 auto',
-        backgroundColor: '#FFFFFF',
-        color: '#0F172A',
-        borderRadius: '8px',
-        boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.5)',
-        overflow: 'hidden'
-      }}>
-        {/* Header Membrete */}
-        <div style={{ backgroundColor: '#0F172A', color: '#FFF', padding: '32px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div>
-            <div style={{ fontSize: '1.8rem', fontWeight: 'bold', color: '#38BDF8', letterSpacing: '1px' }}>NETSHIELD</div>
-            <div style={{ fontSize: '0.8rem', color: '#94A3B8', marginTop: '4px' }}>SOLUCIONES DE CIBERSEGURIDAD Y PROYECTOS TÉCNICOS</div>
-          </div>
-          <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#38BDF8' }}>COTIZACIÓN OFICIAL</div>
-            <div style={{ fontSize: '0.85rem', color: '#CBD5E1', marginTop: '4px' }}>FOLIO: {quoteData.folio}</div>
-            <div style={{ fontSize: '0.85rem', color: '#94A3B8' }}>FECHA: {quoteData.fecha}</div>
-          </div>
-        </div>
-
-        {/* Cuerpos e Información */}
-        <div style={{ padding: '32px' }}>
-          <div style={{ marginBottom: '24px', paddingBottom: '16px', borderBottom: '1px solid #E2E8F0' }}>
-            <span style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#64748B', textTransform: 'uppercase' }}>DIRIGIDO A:</span>
-            <div style={{ fontSize: '1.1rem', fontWeight: '600', color: '#1E293B' }}>{quoteData.cliente}</div>
-          </div>
-
-          {/* Tabla Estilizada */}
-          <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '24px' }}>
-            <thead>
-              <tr style={{ backgroundColor: '#F8FAFC', borderBottom: '2px solid #E2E8F0', textAlign: 'left', fontSize: '0.85rem', color: '#475569' }}>
-                <th style={{ padding: '12px' }}>CANT.</th>
-                <th style={{ padding: '12px' }}>DESCRIPCIÓN</th>
-                <th style={{ padding: '12px' }}>P. UNITARIO</th>
-                <th style={{ padding: '12px', textAlign: 'right' }}>TOTAL</th>
-              </tr>
-            </thead>
-            <tbody>
-              {quoteData.items?.map((item: any, idx: number) => (
-                <tr key={idx} style={{ borderBottom: '1px solid #F1F5F9', fontSize: '0.9rem' }}>
-                  <td style={{ padding: '12px', fontWeight: 'bold', color: '#0284C7' }}>{item.cantidad}</td>
-                  <td style={{ padding: '12px', color: '#334155' }}>{item.descripcion}</td>
-                  <td style={{ padding: '12px', color: '#475569' }}>${(item.precioUnitario || 0).toLocaleString('es-CL')}</td>
-                  <td style={{ padding: '12px', textAlign: 'right', fontWeight: 'bold', color: '#0F172A' }}>${(item.total || 0).toLocaleString('es-CL')}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-
-          {/* Bloque Inferior Totales & Sello */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderTop: '2px solid #E2E8F0', paddingTop: '20px' }}>
-            <div style={{ maxWidth: '350px' }}>
-              <div style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#64748B', marginBottom: '4px' }}>OBSERVACIONES TÉCNICAS:</div>
-              <div style={{ fontSize: '0.85rem', color: '#64748B', fontStyle: 'italic' }}>{quoteData.observaciones}</div>
-              <div style={{ marginTop: '16px', display: 'inline-block', padding: '6px 12px', border: '1px solid #10B981', color: '#059669', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 'bold' }}>
-                ✓ FIRMA Y DOCUMENTO VERIFICADO
-              </div>
-            </div>
-
-            <div style={{ width: '220px', textAlign: 'right', fontSize: '0.9rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', color: '#64748B' }}>
-                <span>Subtotal:</span>
-                <span>${(quoteData.subtotal || 0).toLocaleString('es-CL')}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', color: '#64748B' }}>
-                <span>19% IVA:</span>
-                <span>${(quoteData.iva || 0).toLocaleString('es-CL')}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderTop: '1px solid #CBD5E1', marginTop: '8px', fontSize: '1.1rem', fontWeight: 'bold', color: '#0284C7' }}>
-                <span>TOTAL:</span>
-                <span>${(quoteData.total || 0).toLocaleString('es-CL')} CLP</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Botón de Descarga PDF Directa */}
-          <div style={{ marginTop: '32px', textAlign: 'center' }}>
+          {quoteData && (
             <button
-              onClick={generatePDF}
+              onClick={() => window.print()}
               style={{
+                width: '100%',
                 backgroundColor: '#10B981',
                 color: '#FFF',
                 border: 'none',
-                borderRadius: '8px',
-                padding: '14px 28px',
-                fontSize: '1rem',
-                fontWeight: 'bold',
-                cursor: 'pointer',
-                boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)'
+                borderRadius: '6px',
+                padding: '12px',
+                fontWeight: '600',
+                fontSize: '0.95rem',
+                cursor: 'pointer'
               }}
             >
-              📄 DESCARGAR PDF OFICIAL
+              📥 Guardar / Imprimir PDF Oficial
             </button>
-          </div>
+          )}
         </div>
+
+        {/* Panel Derecho: Visor de Hoja A4 Cotium */}
+        <div>
+          {quoteData ? (
+            <div style={{ backgroundColor: '#FFFFFF', padding: '48px', borderRadius: '8px', border: '1px solid #CBD5E1', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }}>
+              
+              {/* Membrete Documento Cotium */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '3px solid #0F172A', paddingBottom: '20px', marginBottom: '24px' }}>
+                <div>
+                  <h1 style={{ fontSize: '1.8rem', fontWeight: '800', color: '#0F172A', margin: 0, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{companyName}</h1>
+                  <p style={{ fontSize: '0.85rem', color: '#0284C7', margin: '4px 0 0 0', fontWeight: '600' }}>PLATAFORMA COTIUM - DOCUMENTO OFICIAL</p>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: '1.2rem', fontWeight: '700', color: '#0284C7' }}>COTIZACIÓN</div>
+                  <div style={{ fontSize: '0.85rem', color: '#475569', marginTop: '4px' }}><b>FOLIO:</b> {quoteData.folio}</div>
+                  <div style={{ fontSize: '0.85rem', color: '#475569' }}><b>FECHA:</b> {quoteData.fecha}</div>
+                </div>
+              </div>
+
+              {/* Info Cliente */}
+              <div style={{ marginBottom: '24px', backgroundColor: '#F8FAFC', padding: '16px', borderRadius: '6px', border: '1px solid #E2E8F0' }}>
+                <span style={{ fontSize: '0.75rem', fontWeight: '700', color: '#64748B', textTransform: 'uppercase' }}>CLIENTE / DESTINATARIO:</span>
+                <div style={{ fontSize: '1rem', fontWeight: '600', color: '#1E293B', marginTop: '2px' }}>{quoteData.cliente}</div>
+              </div>
+
+              {/* Tabla de Productos */}
+              <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '24px' }}>
+                <thead>
+                  <tr style={{ backgroundColor: '#0F172A', color: '#FFFFFF', textAlign: 'left', fontSize: '0.85rem' }}>
+                    <th style={{ padding: '10px 12px' }}>CANT.</th>
+                    <th style={{ padding: '10px 12px' }}>DESCRIPCIÓN</th>
+                    <th style={{ padding: '10px 12px' }}>P. UNITARIO</th>
+                    <th style={{ padding: '10px 12px', textAlign: 'right' }}>TOTAL</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {quoteData.items?.map((item: any, idx: number) => (
+                    <tr key={idx} style={{ borderBottom: '1px solid #E2E8F0', fontSize: '0.9rem' }}>
+                      <td style={{ padding: '12px', fontWeight: '700', color: '#0284C7' }}>{item.cantidad}</td>
+                      <td style={{ padding: '12px', color: '#334155' }}>{item.descripcion}</td>
+                      <td style={{ padding: '12px', color: '#475569' }}>${(item.precioUnitario || 0).toLocaleString('es-CL')}</td>
+                      <td style={{ padding: '12px', textAlign: 'right', fontWeight: '700', color: '#0F172A' }}>${(item.total || 0).toLocaleString('es-CL')}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              {/* Resumen de Valores */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '2px solid #E2E8F0', paddingTop: '16px' }}>
+                <div style={{ maxWidth: '300px', fontSize: '0.8rem', color: '#64748B' }}>
+                  <b>Notas Técnicas:</b> {quoteData.observaciones}
+                </div>
+                <div style={{ width: '220px', textAlign: 'right', fontSize: '0.9rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', color: '#475569' }}>
+                    <span>Subtotal:</span>
+                    <span>${(quoteData.subtotal || 0).toLocaleString('es-CL')}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', color: '#475569' }}>
+                    <span>19% IVA:</span>
+                    <span>${(quoteData.iva || 0).toLocaleString('es-CL')}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderTop: '1px solid #CBD5E1', marginTop: '6px', fontSize: '1.15rem', fontWeight: '800', color: '#0284C7' }}>
+                    <span>TOTAL:</span>
+                    <span>${(quoteData.total || 0).toLocaleString('es-CL')} CLP</span>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          ) : (
+            <div style={{ backgroundColor: '#FFFFFF', padding: '64px', borderRadius: '8px', border: '1px dashed #CBD5E1', textAlign: 'center', color: '#94A3B8' }}>
+              <div style={{ fontSize: '2.5rem', marginBottom: '12px' }}>⚡</div>
+              <h3 style={{ fontSize: '1.2rem', color: '#475569', margin: '0 0 8px 0', fontWeight: '700' }}>Visor de Documentos Cotium</h3>
+              <p style={{ fontSize: '0.9rem', margin: 0 }}>Ingresa la lista de productos para generar la hoja de cotización formal.</p>
+            </div>
+          )}
+        </div>
+
       </div>
+
+      <style jsx global>{`
+        @media print {
+          .no-print { display: none !important; }
+          body { background-color: white !important; }
+        }
+      `}</style>
     </div>
   );
 }

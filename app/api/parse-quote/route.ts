@@ -7,13 +7,13 @@ export async function POST(req: Request) {
 
     if (!apiKey) {
       return NextResponse.json(
-        { error: 'No se detecta GEMINI_API_KEY en las variables de Vercel.' },
+        { error: 'No se detecta GEMINI_API_KEY en Vercel.' },
         { status: 400 }
       );
     }
 
     const systemPrompt = `
-      Eres un asistente de cotizaciones para Chile. 
+      Eres un asistente de cotizaciones para Chile.
       Analiza la siguiente solicitud: "${prompt}"
       
       Responde EXCLUSIVAMENTE con un objeto JSON sin formato markdown ni comillas triples:
@@ -33,13 +33,13 @@ export async function POST(req: Request) {
         "subtotal": 10000,
         "iva": 1900,
         "total": 11900,
-        "observaciones": "Valores expresados en Pesos Chilenos (CLP)."
+        "observaciones": "Valores en CLP."
       }
     `;
 
-    // Alias universal que redirige al modelo disponible
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`,
+    // Probamos primero con el modelo estándar sin sufijo extra
+    let response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -49,7 +49,22 @@ export async function POST(req: Request) {
       }
     );
 
-    const result = await response.json();
+    let result = await response.json();
+
+    // Si gemini-2.5-flash no está activo en tu cuenta, intenta con gemini-1.5-flash
+    if (result.error && result.error.code === 404) {
+      response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: systemPrompt }] }]
+          })
+        }
+      );
+      result = await response.json();
+    }
 
     if (result.error) {
       return NextResponse.json(

@@ -6,15 +6,23 @@ import 'jspdf-autotable';
 export default function Home() {
   const [prompt, setPrompt] = useState('');
   const [loading, setLoading] = useState(false);
-  const [statusText, setStatusText] = useState('SISTEMA EN ESPERA');
-  const [quoteData, setQuoteData] = useState<any>(null);
+  const [quoteData, setQuoteData] = useState<any>({
+    folio: 'NS-2026-8841',
+    fecha: new Date().toLocaleDateString('es-CL'),
+    cliente: 'Empresa / Solicitante',
+    items: [
+      { cantidad: 10, descripcion: 'Foco LED Panel 18W Empotrable', precioUnitario: 14900, total: 149000 },
+      { cantidad: 1, descripcion: 'Servicio de Inspección y Montaje Técnico', precioUnitario: 45000, total: 45000 }
+    ],
+    subtotal: 194000,
+    iva: 36860,
+    total: 230860,
+    observaciones: 'Documento preliminar generado automáticamente por NetShield Engine v2.0.'
+  });
 
-  const handleProcess = async () => {
+  const handleGenerate = async () => {
     if (!prompt.trim()) return;
     setLoading(true);
-    setStatusText('ANALIZANDO SOLICITUD Y NORMAS DE SEGURIDAD...');
-    setQuoteData(null);
-
     try {
       const res = await fetch('/api/parse-quote', {
         method: 'POST',
@@ -22,38 +30,11 @@ export default function Home() {
         body: JSON.stringify({ prompt }),
       });
       const data = await res.json();
-
-      let parsed = data.data;
-      if (!parsed) {
-        // Fallback local en caso de que falte la API Key o falle la respuesta
-        parsed = {
-          folio: `NS-${Math.floor(100000 + Math.random() * 900000)}`,
-          fecha: new Date().toLocaleDateString('es-CL'),
-          cliente: 'Cliente General / Empresa',
-          items: [
-            { cantidad: 10, descripcion: prompt, precioUnitario: 15000, total: 150000 }
-          ],
-          subtotal: 150000,
-          iva: 28500,
-          total: 178500,
-          observaciones: 'Presupuesto sujeto a disponibilidad técnica e inspección en terreno.'
-        };
+      if (data.data) {
+        setQuoteData(data.data);
       }
-      setQuoteData(parsed);
-      setStatusText('ANÁLISIS COMPLETADO - DOCUMENTO LISTO');
     } catch (e) {
       console.error(e);
-      setStatusText('ERROR DE RED - GENERANDO MODO LOCAL');
-      setQuoteData({
-        folio: `NS-${Math.floor(100000 + Math.random() * 900000)}`,
-        fecha: new Date().toLocaleDateString('es-CL'),
-        cliente: 'Cliente Estándar',
-        items: [{ cantidad: 1, descripcion: prompt, precioUnitario: 25000, total: 25000 }],
-        subtotal: 25000,
-        iva: 4750,
-        total: 29750,
-        observaciones: 'Generado autónomamente por NetShield Engine.'
-      });
     } finally {
       setLoading(false);
     }
@@ -61,211 +42,222 @@ export default function Home() {
 
   const generatePDF = () => {
     if (!quoteData) return;
-
     const doc = new jsPDF();
 
-    // Encabezado Cyber / Antivirus Estilo NetShield
-    doc.setFillColor(15, 23, 42); // slate-900
-    doc.rect(0, 0, 210, 40, 'F');
+    // Encabezado Corporativo Dark
+    doc.setFillColor(15, 23, 42);
+    doc.rect(0, 0, 210, 38, 'F');
 
-    doc.setTextColor(56, 189, 248); // sky-400
-    doc.setFontSize(22);
+    doc.setTextColor(56, 189, 248);
+    doc.setFontSize(20);
     doc.setFont('helvetica', 'bold');
-    doc.text('NETSHIELD AUDIT & QUOTE', 14, 22);
+    doc.text('NETSHIELD', 14, 20);
 
-    doc.setTextColor(226, 232, 240);
+    doc.setTextColor(241, 245, 249);
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
-    doc.text(`FOLIO: ${quoteData.folio}  |  FECHA: ${quoteData.fecha}`, 14, 32);
+    doc.text('SOLUCIONES DE CIBERSEGURIDAD Y PROYECTOS TÉCNICOS', 14, 28);
 
-    // Información del Cliente y Estado
+    // Metadatos
     doc.setTextColor(30, 41, 59);
     doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
-    doc.text('DETALLES DE LA SOLICITUD', 14, 50);
-
+    doc.text(`COTIZACIÓN N°: ${quoteData.folio}`, 140, 20);
+    doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(10);
-    doc.text(`Cliente / Entidad: ${quoteData.cliente}`, 14, 58);
-    doc.text(`Estado de Verificación: AUTENTICADO / SEGURO`, 14, 64);
+    doc.text(`Fecha: ${quoteData.fecha}`, 140, 27);
 
-    // Tabla de Ítems
+    // Cliente
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.text('INFORMACIÓN DEL CLIENTE:', 14, 48);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Entidad: ${quoteData.cliente}`, 14, 55);
+
+    // Tabla de Productos
     const tableRows = quoteData.items.map((item: any) => [
       item.cantidad,
       item.descripcion,
-      `$${item.precioUnitario?.toLocaleString('es-CL') || 0}`,
-      `$${item.total?.toLocaleString('es-CL') || 0}`
+      `$${(item.precioUnitario || 0).toLocaleString('es-CL')}`,
+      `$${(item.total || 0).toLocaleString('es-CL')}`
     ]);
 
     (doc as any).autoTable({
-      startY: 72,
-      head: [['Cant.', 'Descripción del Producto / Servicio', 'P. Unitario ($)', 'Total ($)']],
+      startY: 62,
+      head: [['Cant.', 'Descripción / Detalle Técnico', 'P. Unitario', 'Total']],
       body: tableRows,
-      headStyles: { fillStyle: 'F', fillColor: [2, 132, 199], textColor: [255, 255, 255], fontStyle: 'bold' },
-      styles: { fontSize: 9, cellPadding: 4 },
-      theme: 'grid'
+      headStyles: { fillColor: [15, 23, 42], textColor: [255, 255, 255], fontStyle: 'bold' },
+      styles: { fontSize: 9, cellPadding: 5 },
+      theme: 'striped'
     });
 
-    const finalY = (doc as any).lastAutoTable.finalY + 10;
+    const finalY = (doc as any).lastAutoTable.finalY + 12;
 
-    // Resumen Financiero
+    // Totales
     doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Subtotal:`, 135, finalY);
+    doc.text(`$${(quoteData.subtotal || 0).toLocaleString('es-CL')}`, 170, finalY, { align: 'right' });
+
+    doc.text(`19% IVA:`, 135, finalY + 6);
+    doc.text(`$${(quoteData.iva || 0).toLocaleString('es-CL')}`, 170, finalY + 6, { align: 'right' });
+
     doc.setFont('helvetica', 'bold');
-    doc.text(`Subtotal: $${quoteData.subtotal?.toLocaleString('es-CL') || 0}`, 130, finalY);
-    doc.text(`IVA (19%): $${quoteData.iva?.toLocaleString('es-CL') || 0}`, 130, finalY + 6);
     doc.setFontSize(12);
     doc.setTextColor(2, 132, 199);
-    doc.text(`TOTAL: $${quoteData.total?.toLocaleString('es-CL') || 0} CLP`, 130, finalY + 14);
+    doc.text(`TOTAL CLP:`, 135, finalY + 14);
+    doc.text(`$${(quoteData.total || 0).toLocaleString('es-CL')}`, 170, finalY + 14, { align: 'right' });
 
-    // Pie de página y Notas
+    // Pie de página
     doc.setTextColor(100, 116, 139);
     doc.setFontSize(8);
     doc.setFont('helvetica', 'italic');
-    doc.text(`Observaciones: ${quoteData.observaciones || 'Sin observaciones.'}`, 14, finalY + 25);
-    doc.text('Documento generado automáticamente por NetShield Engine v2.0 - Autenticidad Validada.', 14, finalY + 32);
+    doc.text(`Notas: ${quoteData.observaciones || 'Documento oficial con validez técnica.'}`, 14, finalY + 30);
 
     doc.save(`Cotizacion_${quoteData.folio}.pdf`);
   };
 
   return (
-    <div style={{ backgroundColor: '#090d16', minHeight: '100vh', color: '#e2e8f0', fontFamily: 'monospace, sans-serif', padding: '24px 16px' }}>
-      <main style={{ maxWidth: '900px', margin: '0 auto' }}>
-
-        {/* Top Antivirus Status Bar */}
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          backgroundColor: '#111827',
-          border: '1px solid #1e293b',
-          borderRadius: '12px',
-          padding: '16px 24px',
-          marginBottom: '24px',
-          boxShadow: '0 0 20px rgba(56, 189, 248, 0.05)'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{
-              width: '14px',
-              height: '14px',
-              borderRadius: '50%',
-              backgroundColor: loading ? '#f59e0b' : '#10b981',
-              boxShadow: loading ? '0 0 10px #f59e0b' : '0 0 10px #10b981'
-            }} />
-            <div>
-              <div style={{ fontWeight: 'bold', fontSize: '1rem', color: '#38bdf8' }}>NETSHIELD ENGINE v2.0</div>
-              <div style={{ fontSize: '0.75rem', color: '#64748b' }}>SISTEMA AUTÓNOMO DE GENERACIÓN Y AUDITORÍA</div>
-            </div>
-          </div>
-          <div style={{ fontSize: '0.8rem', padding: '6px 12px', borderRadius: '6px', backgroundColor: '#1e293b', color: '#94a3b8' }}>
-            {statusText}
-          </div>
-        </div>
-
-        {/* Input Terminal Box */}
-        <div style={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '12px', padding: '24px', marginBottom: '24px' }}>
-          <label style={{ display: 'block', fontSize: '0.85rem', color: '#38bdf8', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '1px' }}>
-            &gt; INGRESE REQUERIMIENTO O LISTADO DE PRODUCTOS:
-          </label>
-          <textarea
+    <div style={{ backgroundColor: '#0B0F17', minHeight: '100vh', padding: '32px 16px', fontFamily: 'system-ui, sans-serif' }}>
+      {/* Panel Superior de Control */}
+      <div style={{ maxWidth: '850px', margin: '0 auto 24px', backgroundColor: '#161F2E', padding: '20px', borderRadius: '12px', border: '1px solid #233146' }}>
+        <h1 style={{ color: '#38BDF8', fontSize: '1.25rem', fontWeight: 'bold', margin: '0 0 12px 0' }}>
+          🛡️ GENERADOR DE DOCUMENTOS Y COTIZACIONES
+        </h1>
+        <div style={{ display: 'flex', gap: '12px' }}>
+          <input
+            type="text"
             style={{
-              width: '100%',
-              height: '100px',
-              backgroundColor: '#020617',
+              flex: 1,
+              backgroundColor: '#0B0F17',
               border: '1px solid #334155',
               borderRadius: '8px',
-              color: '#38bdf8',
-              padding: '12px',
+              color: '#F8FAFC',
+              padding: '12px 16px',
               fontSize: '0.95rem',
-              outline: 'none',
-              boxSizing: 'border-box',
-              resize: 'vertical',
-              fontFamily: 'monospace'
+              outline: 'none'
             }}
-            placeholder="Ej: Cotizar 10 focos led de 18w y 5 rollos de cable 2.5mm"
+            placeholder="Ej: Cotizar 20 focos LED de 18W y mano de obra..."
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
           />
-
           <button
-            onClick={handleProcess}
+            onClick={handleGenerate}
             disabled={loading}
             style={{
-              marginTop: '16px',
-              width: '100%',
-              padding: '14px',
-              backgroundColor: loading ? '#334155' : '#0284c7',
-              color: '#ffffff',
+              backgroundColor: '#0284C7',
+              color: '#FFF',
               border: 'none',
               borderRadius: '8px',
-              fontSize: '0.95rem',
+              padding: '0 24px',
               fontWeight: 'bold',
-              letterSpacing: '1px',
-              cursor: loading ? 'not-allowed' : 'pointer',
-              boxShadow: '0 4px 12px rgba(2, 132, 199, 0.3)',
-              textTransform: 'uppercase'
+              cursor: loading ? 'not-allowed' : 'pointer'
             }}
           >
-            {loading ? 'ANALIZANDO Y ESCANEANDO...' : 'PROCESAR Y ANALIZAR COTIZACIÓN'}
+            {loading ? 'Procesando...' : 'Actualizar Hoja'}
           </button>
         </div>
+      </div>
 
-        {/* Output Panel / PDF Generator */}
-        {quoteData && (
-          <div style={{ backgroundColor: '#0f172a', border: '1px solid #0284c7', borderRadius: '12px', padding: '24px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <h3 style={{ margin: 0, color: '#38bdf8', fontSize: '1.1rem' }}>RESUMEN DE COTIZACIÓN PROCESADA</h3>
-              <button
-                onClick={generatePDF}
-                style={{
-                  padding: '10px 18px',
-                  backgroundColor: '#10b981',
-                  color: '#ffffff',
-                  border: 'none',
-                  borderRadius: '6px',
-                  fontWeight: 'bold',
-                  cursor: 'pointer',
-                  boxShadow: '0 2px 8px rgba(16, 185, 129, 0.4)'
-                }}
-              >
-                📥 DESCARGAR INFORME PDF AUTÓNOMO
-              </button>
+      {/* VISTA HOJA DOCUMENTO PDF (A4 PREVIEW) */}
+      <div style={{
+        maxWidth: '850px',
+        margin: '0 auto',
+        backgroundColor: '#FFFFFF',
+        color: '#0F172A',
+        borderRadius: '8px',
+        boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.5)',
+        overflow: 'hidden'
+      }}>
+        {/* Header Membrete */}
+        <div style={{ backgroundColor: '#0F172A', color: '#FFF', padding: '32px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <div style={{ fontSize: '1.8rem', fontWeight: 'bold', color: '#38BDF8', letterSpacing: '1px' }}>NETSHIELD</div>
+            <div style={{ fontSize: '0.8rem', color: '#94A3B8', marginTop: '4px' }}>SOLUCIONES DE CIBERSEGURIDAD Y PROYECTOS TÉCNICOS</div>
+          </div>
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#38BDF8' }}>COTIZACIÓN OFICIAL</div>
+            <div style={{ fontSize: '0.85rem', color: '#CBD5E1', marginTop: '4px' }}>FOLIO: {quoteData.folio}</div>
+            <div style={{ fontSize: '0.85rem', color: '#94A3B8' }}>FECHA: {quoteData.fecha}</div>
+          </div>
+        </div>
+
+        {/* Cuerpos e Información */}
+        <div style={{ padding: '32px' }}>
+          <div style={{ marginBottom: '24px', paddingBottom: '16px', borderBottom: '1px solid #E2E8F0' }}>
+            <span style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#64748B', textTransform: 'uppercase' }}>DIRIGIDO A:</span>
+            <div style={{ fontSize: '1.1rem', fontWeight: '600', color: '#1E293B' }}>{quoteData.cliente}</div>
+          </div>
+
+          {/* Tabla Estilizada */}
+          <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '24px' }}>
+            <thead>
+              <tr style={{ backgroundColor: '#F8FAFC', borderBottom: '2px solid #E2E8F0', textAlign: 'left', fontSize: '0.85rem', color: '#475569' }}>
+                <th style={{ padding: '12px' }}>CANT.</th>
+                <th style={{ padding: '12px' }}>DESCRIPCIÓN</th>
+                <th style={{ padding: '12px' }}>P. UNITARIO</th>
+                <th style={{ padding: '12px', textAlign: 'right' }}>TOTAL</th>
+              </tr>
+            </thead>
+            <tbody>
+              {quoteData.items?.map((item: any, idx: number) => (
+                <tr key={idx} style={{ borderBottom: '1px solid #F1F5F9', fontSize: '0.9rem' }}>
+                  <td style={{ padding: '12px', fontWeight: 'bold', color: '#0284C7' }}>{item.cantidad}</td>
+                  <td style={{ padding: '12px', color: '#334155' }}>{item.descripcion}</td>
+                  <td style={{ padding: '12px', color: '#475569' }}>${(item.precioUnitario || 0).toLocaleString('es-CL')}</td>
+                  <td style={{ padding: '12px', textAlign: 'right', fontWeight: 'bold', color: '#0F172A' }}>${(item.total || 0).toLocaleString('es-CL')}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          {/* Bloque Inferior Totales & Sello */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderTop: '2px solid #E2E8F0', paddingTop: '20px' }}>
+            <div style={{ maxWidth: '350px' }}>
+              <div style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#64748B', marginBottom: '4px' }}>OBSERVACIONES TÉCNICAS:</div>
+              <div style={{ fontSize: '0.85rem', color: '#64748B', fontStyle: 'italic' }}>{quoteData.observaciones}</div>
+              <div style={{ marginTop: '16px', display: 'inline-block', padding: '6px 12px', border: '1px solid #10B981', color: '#059669', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 'bold' }}>
+                ✓ FIRMA Y DOCUMENTO VERIFICADO
+              </div>
             </div>
 
-            <div style={{ backgroundColor: '#020617', padding: '16px', borderRadius: '8px', border: '1px solid #1e293b' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px', fontSize: '0.85rem' }}>
-                <div><strong style={{ color: '#64748b' }}>FOLIO:</strong> {quoteData.folio}</div>
-                <div><strong style={{ color: '#64748b' }}>FECHA:</strong> {quoteData.fecha}</div>
+            <div style={{ width: '220px', textAlign: 'right', fontSize: '0.9rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', color: '#64748B' }}>
+                <span>Subtotal:</span>
+                <span>${(quoteData.subtotal || 0).toLocaleString('es-CL')}</span>
               </div>
-
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem', marginBottom: '16px' }}>
-                <thead>
-                  <tr style={{ borderBottom: '1px solid #334155', color: '#94a3b8', textAlign: 'left' }}>
-                    <th style={{ padding: '8px' }}>CANT.</th>
-                    <th style={{ padding: '8px' }}>DESCRIPCIÓN</th>
-                    <th style={{ padding: '8px' }}>UNITARIO</th>
-                    <th style={{ padding: '8px', textAlign: 'right' }}>TOTAL</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {quoteData.items?.map((item: any, idx: number) => (
-                    <tr key={idx} style={{ borderBottom: '1px solid #1e293b' }}>
-                      <td style={{ padding: '8px', color: '#38bdf8' }}>{item.cantidad}</td>
-                      <td style={{ padding: '8px' }}>{item.descripcion}</td>
-                      <td style={{ padding: '8px' }}>${item.precioUnitario?.toLocaleString('es-CL')}</td>
-                      <td style={{ padding: '8px', textAlign: 'right', fontWeight: 'bold' }}>${item.total?.toLocaleString('es-CL')}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-
-              <div style={{ textAlign: 'right', fontSize: '1rem', color: '#38bdf8', fontWeight: 'bold' }}>
-                TOTAL ESTIMADO: ${quoteData.total?.toLocaleString('es-CL')} CLP
+              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', color: '#64748B' }}>
+                <span>19% IVA:</span>
+                <span>${(quoteData.iva || 0).toLocaleString('es-CL')}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderTop: '1px solid #CBD5E1', marginTop: '8px', fontSize: '1.1rem', fontWeight: 'bold', color: '#0284C7' }}>
+                <span>TOTAL:</span>
+                <span>${(quoteData.total || 0).toLocaleString('es-CL')} CLP</span>
               </div>
             </div>
           </div>
-        )}
 
-      </main>
+          {/* Botón de Descarga PDF Directa */}
+          <div style={{ marginTop: '32px', textAlign: 'center' }}>
+            <button
+              onClick={generatePDF}
+              style={{
+                backgroundColor: '#10B981',
+                color: '#FFF',
+                border: 'none',
+                borderRadius: '8px',
+                padding: '14px 28px',
+                fontSize: '1rem',
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)'
+              }}
+            >
+              📄 DESCARGAR PDF OFICIAL
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

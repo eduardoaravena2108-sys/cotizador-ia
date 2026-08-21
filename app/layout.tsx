@@ -1,18 +1,23 @@
-import type { Metadata } from "next";
+import Script from 'next/script';
 
-export const metadata: Metadata = {
-  title: "Cotizador IA",
-  description: "Generador de cotizaciones con Inteligencia Artificial",
+export const metadata = {
+  title: 'Cotizador IA - Cotium',
+  description: 'Generador oficial de cotizaciones',
 };
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
     <html lang="es">
-      <body>{children}</body>
+      <head>
+        <Script src="https://cdn.tailwindcss.com" strategy="beforeInteractive" />
+      </head>
+      <body className="bg-slate-100 text-slate-800 antialiased font-sans">
+        {children}
+      </body>
     </html>
   );
 }

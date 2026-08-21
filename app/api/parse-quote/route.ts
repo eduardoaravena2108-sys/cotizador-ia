@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { GoogleGenAI } from '@google/genai';
 
 export async function POST(req: Request) {
   try {
@@ -6,63 +7,64 @@ export async function POST(req: Request) {
     const apiKey = process.env.GEMINI_API_KEY;
 
     if (!apiKey) {
-      const matchQty = prompt.match(/\d+/);
-      const cantidad = matchQty ? parseInt(matchQty[0]) : 1;
-      const basePrice = 18500;
-      const subtotal = cantidad * basePrice;
-      const iva = Math.round(subtotal * 0.19);
-      const total = subtotal + iva;
-
-      return NextResponse.json({
-        data: {
-          folio: `CTM-${Math.floor(100000 + Math.random() * 900000)}`,
-          fecha: new Date().toLocaleDateString('es-CL'),
-          cliente: cliente || 'Cliente General',
-          empresa: empresa || 'COTIUM SPA',
-          items: [
-            { cantidad, descripcion: prompt || 'Producto/Servicio Solicitado', precioUnitario: basePrice, total: subtotal }
-          ],
-          subtotal,
-          iva,
-          total,
-          observaciones: 'Cotización procesada por el motor central de Cotium.'
-        }
-      });
+      return NextResponse.json(
+        { error: 'Falta la variable GEMINI_API_KEY en Vercel.' },
+        { status: 400 }
+      );
     }
 
-    const systemPrompt = `Eres el motor central de inteligencia comercial de la plataforma COTIUM. Analiza la siguiente solicitud: "${prompt}".
-Extracta las cantidades e ítems explícitos. Asigna precios unitarios de mercado chilenos (en pesos CLP).
-Devuelve ÚNICAMENTE un JSON válido con esta estructura exacta:
-{
-  "folio": "CTM-${Math.floor(100000 + Math.random() * 900000)}",
-  "fecha": "${new Date().toLocaleDateString('es-CL')}",
-  "cliente": "${cliente || 'Cliente General'}",
-  "empresa": "${empresa || 'COTIUM SPA'}",
-  "items": [
-    { "cantidad": 10, "descripcion": "Nombre del ítem", "precioUnitario": 15000, "total": 150000 }
-  ],
-  "subtotal": 150000,
-  "iva": 28500,
-  "total": 178500,
-  "observaciones": "Documento verificado y respaldado por Cotium Engine."
-}`;
+    // Inicializar cliente oficial de Google Gen AI
+    const ai = new GoogleGenAI({ apiKey });
 
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+    const systemInstruction = `
+      Eres un asistente experto en cotizaciones para el mercado de Chile.
+      Analiza el texto ingresado y responde EXCLUSIVAMENTE con un JSON válido estructurado así:
       {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contents: [{ parts: [{ text: systemPrompt }] }] })
+        "folio": "CTM-${Math.floor(100000 + Math.random() * 900000)}",
+        "fecha": "${new Date().toLocaleDateString('es-CL')}",
+        "cliente": "${cliente || 'Cliente General'}",
+        "empresa": "${empresa || 'COTIUM SPA'}",
+        "items": [
+          {
+            "cantidad": 1,
+            "descripcion": "Nombre del producto",
+            "precioUnitario": 1000,
+            "total": 1000
+          }
+        ],
+        "subtotal": 1000,
+        "iva": 190,
+        "total": 1190,
+        "observaciones": "Valores expresados en Pesos Chilenos (CLP)."
       }
+      Calcula los precios unitarios estimando valores de mercado en CLP si no se especifican.
+      Asegúrate de calcular correctamente el IVA (19%) sobre el subtotal.
+    `;
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: prompt,
+      config: {
+        systemInstruction,
+        responseMimeType: 'application/json',
+      },
+    });
+
+    const textResponse = response.text;
+    
+    if (!textResponse) {
+      throw new Error('La IA no devolvió respuesta.');
+    }
+
+    const parsedData = JSON.parse(textResponse);
+
+    return NextResponse.json({ data: parsedData });
+
+  } catch (error: any) {
+    console.error('Error en API Cotium:', error);
+    return NextResponse.json(
+      { error: `Error en servidor: ${error.message}` },
+      { status: 500 }
     );
-
-    const data = await response.json();
-    const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    const cleanJson = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
-    const parsed = JSON.parse(cleanJson);
-
-    return NextResponse.json({ data: parsed });
-  } catch (error) {
-    return NextResponse.json({ error: 'Error al procesar en Cotium' }, { status: 500 });
   }
 }

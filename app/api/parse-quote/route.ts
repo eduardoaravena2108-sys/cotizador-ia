@@ -33,12 +33,13 @@ export async function POST(req: Request) {
         "subtotal": 10000,
         "iva": 1900,
         "total": 11900,
-        "observaciones": "Valores en CLP."
+        "observaciones": "Valores expresados en Pesos Chilenos (CLP)."
       }
     `;
 
+    // Se actualiza el nombre del modelo a gemini-2.5-flash o gemini-1.5-flash-latest
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(req: Request) {
   try {
     const { prompt, cliente, empresa, existingItems = [] } = await req.json();
@@ -8,17 +10,17 @@ export async function POST(req: Request) {
 
     if (!apiKey) {
       return NextResponse.json(
-        { error: 'Falta la clave API en el servidor (OPENAI_API_KEY).' },
+        { error: 'No se encontró la clave OPENAI_API_KEY en las variables de Vercel.' },
         { status: 500 }
       );
     }
 
     const systemPrompt = `
-Eres un experto en compras y cotizaciones de mantenimiento y servicios técnicos en Chile.
-Para cada producto o servicio que pida el usuario, genera una estructura JSON con precios estimados de mercado chileno (en CLP).
-Para cada ítem, indica su 'tiendaOrigen' (ej: Homecenter Sodimac, Easy, Imperial, MercadoLibre) y, si aplica, incluye una 'ofertaSugerida' con un precio más económico en otra tienda de competencia.
+Eres un experto en compras y cotizaciones en Chile.
+Para cada producto solicitado, genera una lista de ítems en CLP.
+Indica en 'tiendaOrigen' la tienda donde se cotiza (ej: Homecenter Sodimac) y en 'ofertaSugerida' si existe una mejor opción (ej: Easy Chile).
 
-Devuelve ÚNICAMENTE un objeto JSON válido con este formato:
+Devuelve EXCLUSIVAMENTE un JSON válido con esta estructura exacta:
 {
   "folio": "${Math.floor(1000 + Math.random() * 9000)}",
   "fecha": "${new Date().toLocaleDateString('es-CL')}",
@@ -27,17 +29,17 @@ Devuelve ÚNICAMENTE un objeto JSON válido con este formato:
   "items": [
     {
       "cantidad": 1,
-      "descripcion": "Nombre del ítem",
-      "precioUnitario": 15000,
+      "descripcion": "Nombre del producto",
+      "precioUnitario": 25000,
       "tiendaOrigen": "Homecenter Sodimac",
       "ofertaSugerida": {
         "tienda": "Easy Chile",
-        "precio": 12500,
-        "ahorro": 2500
+        "precio": 21990,
+        "ahorro": 3010
       }
     }
   ],
-  "observaciones": "Valores referenciales verificados en tiendas del rubro."
+  "observaciones": "Precios verificados en línea."
 }
 `;
 
@@ -51,7 +53,7 @@ Devuelve ÚNICAMENTE un objeto JSON válido con este formato:
         model: 'gpt-4o-mini',
         messages: [
           { role: 'system', content: systemPrompt },
-          { role: 'user', content: `Ítems actuales: ${JSON.stringify(existingItems)}. Solicito agregar: ${prompt}` },
+          { role: 'user', content: `Ítems actuales: ${JSON.stringify(existingItems)}. Agregar: ${prompt}` },
         ],
         response_format: { type: 'json_object' },
       }),
@@ -61,7 +63,7 @@ Devuelve ÚNICAMENTE un objeto JSON válido con este formato:
 
     if (!response.ok) {
       return NextResponse.json(
-        { error: data.error?.message || 'Error al conectar con la API de IA' },
+        { error: data.error?.message || 'Error en la respuesta de OpenAI' },
         { status: response.status }
       );
     }
@@ -69,7 +71,7 @@ Devuelve ÚNICAMENTE un objeto JSON válido con este formato:
     const result = JSON.parse(data.choices[0].message.content);
 
     const subtotal = result.items.reduce(
-      (acc: number, item: any) => acc + item.cantidad * item.precioUnitario,
+      (acc: number, item: any) => acc + (item.cantidad * item.precioUnitario),
       0
     );
     const iva = Math.round(subtotal * 0.19);
@@ -85,7 +87,7 @@ Devuelve ÚNICAMENTE un objeto JSON válido con este formato:
     });
   } catch (err: any) {
     return NextResponse.json(
-      { error: err.message || 'Error interno del servidor' },
+      { error: err.message || 'Error interno en el servidor.' },
       { status: 500 }
     );
   }

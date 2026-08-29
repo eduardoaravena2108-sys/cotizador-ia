@@ -21,20 +21,20 @@ export async function POST(req: Request) {
     }
 
     const systemPrompt = `Eres un asistente experto en cotización de materiales de construcción y ferretería en CHILE.
-Tu tarea es analizar la solicitud y responder con precios estimativos reales de tiendas de Chile (Sodimac, Easy, Imperial, Construmart, Mercado Libre Chile).
+Tu tarea es BUSCAR EN LA WEB EN TIEMPO REAL precios reales y actuales en tiendas de Chile (Sodimac, Easy, Imperial, Construmart, Mercado Libre Chile).
 
-Devuelve EXCLUSIVAMENTE un objeto JSON válido con este formato:
+Para la consulta del usuario, debes devolver EXCLUSIVAMENTE un objeto JSON válido con este formato exacto:
 {
   "items": [
     {
       "cantidad": 1,
-      "descripcion": "${prompt}",
+      "descripcion": "Nombre exacto del producto encontrado",
       "precioUnitario": 45000,
       "precioTotal": 45000,
-      "tiendaOrigen": "Sodimac Chile",
-      "detalleTecnico": "Especificación estándar de mercado Chile",
+      "tiendaOrigen": "Nombre de la tienda (ej: Sodimac Chile)",
+      "detalleTecnico": "Especificación técnica real obtenida de la web",
       "ofertaSugerida": {
-        "tienda": "Easy Chile",
+        "tienda": "Tienda alternativa con menor precio",
         "precio": 39990,
         "ahorro": 5010
       }
@@ -43,33 +43,29 @@ Devuelve EXCLUSIVAMENTE un objeto JSON válido con este formato:
   "subtotal": 45000,
   "iva": 8550,
   "total": 53550,
-  "observaciones": "Precios referenciales estimados mercado Chile."
-}`;
+  "observaciones": "Fuente de datos: Búsqueda web en vivo realizada en tiendas de Chile."
+}
 
-    // Endpoint actualizado usando v1/models/gemini-2.5-flash (o fallback v1/models/gemini-2.0-flash)
-    const url = `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+Reglas:
+1. Todos los precios deben ser en pesos chilenos (CLP) reales encontrados en la web.
+2. Devuelve SOLO el JSON sin texto explicativo ni bloques markdown adicionales.`;
 
-    let response = await fetch(url, {
+    // Endpoint usando gemini-3.6-flash en la API v1beta
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+
+    const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        contents: [{ parts: [{ text: systemPrompt }] }],
-        generationConfig: { response_mime_type: 'application/json' },
+        contents: [
+          {
+            role: 'user',
+            parts: [{ text: `${systemPrompt}\n\nConsulta del usuario: ${prompt}` }],
+          },
+        ],
+        tools: [{ googleSearch: {} }], // Activa la búsqueda en vivo en Google
       }),
     });
-
-    // Respaldar con endpoint alternativo si falla el modelo principal
-    if (!response.ok) {
-      const fallbackUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
-      response = await fetch(fallbackUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: systemPrompt }] }],
-          generationConfig: { response_mime_type: 'application/json' },
-        }),
-      });
-    }
 
     const result = await response.json();
 
@@ -80,8 +76,18 @@ Devuelve EXCLUSIVAMENTE un objeto JSON válido con este formato:
       );
     }
 
-    const candidateText = result?.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
-    const parsedData = JSON.parse(candidateText);
+    const candidateText =
+      result?.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+
+    // Limpiar bloques ```json ... ``` si la API los incluye
+    const cleanJsonText = candidateText.replace(/```json|```/g, '').trim();
+
+    let parsedData;
+    try {
+      parsedData = JSON.parse(cleanJsonText);
+    } catch (e) {
+      throw new Error('La respuesta recibida no tiene formato JSON válido.');
+    }
 
     return NextResponse.json({
       data: {

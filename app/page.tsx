@@ -50,7 +50,7 @@ export default function Home() {
       }
     } catch {
       setError('Error al procesar la cotización.');
-    } fontally {
+    } finally {
       setLoading(false);
     }
   };

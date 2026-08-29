@@ -6,7 +6,6 @@ export async function POST(req: Request) {
   try {
     const { prompt, cliente, empresa, existingItems = [] } = await req.json();
 
-    // Busca la clave en cualquiera de los nombres que hayas configurado en Vercel
     const apiKey = 
       process.env.GEMINI_API_KEY || 
       process.env.Gemini_API_Key_2 || 
@@ -15,16 +14,16 @@ export async function POST(req: Request) {
 
     if (!apiKey) {
       return NextResponse.json(
-        { error: 'No se detectó ninguna variable de API Key en Vercel (GEMINI_API_KEY).' },
+        { error: 'No se detectó la API Key en Vercel.' },
         { status: 500 }
       );
     }
 
     const promptTexto = `
-Eres un experto cotizador ferretero y retail de Chile.
+Eres un experto cotizador ferretero y retail de Chile (Sodimac, Easy, Imperial, MercadoLibre).
 Calcula un precio estimado real en pesos chilenos (CLP) para el siguiente producto: "${prompt}".
 
-Devuelve UNICAMENTE un objeto JSON válido con este formato (sin markdown ni comillas suplementarias):
+Devuelve UNICAMENTE un objeto JSON válido con este formato:
 {
   "folio": "${Math.floor(1000 + Math.random() * 9000)}",
   "fecha": "${new Date().toLocaleDateString('es-CL')}",
@@ -63,7 +62,7 @@ Devuelve UNICAMENTE un objeto JSON válido con este formato (sin markdown ni com
 
     if (!response.ok) {
       return NextResponse.json(
-        { error: `Error de Google Gemini (${response.status}): ${data.error?.message || 'Clave inválida o sin acceso'}` },
+        { error: `Error de Google Gemini (${response.status}): ${data.error?.message || 'Error en la petición'}` },
         { status: response.status }
       );
     }

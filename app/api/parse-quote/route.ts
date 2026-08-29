@@ -50,8 +50,8 @@ Reglas:
 1. Todos los precios deben ser en pesos chilenos (CLP) reales encontrados en la web.
 2. Devuelve SOLO el JSON sin texto explicativo ni bloques markdown adicionales.`;
 
-    // Endpoint usando gemini-3.6-flash en la API v1beta
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+    // Endpoint actualizado a gemini-3.6-flash
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${apiKey}`;
 
     const response = await fetch(url, {
       method: 'POST',
@@ -63,7 +63,7 @@ Reglas:
             parts: [{ text: `${systemPrompt}\n\nConsulta del usuario: ${prompt}` }],
           },
         ],
-        tools: [{ googleSearch: {} }], // Activa la búsqueda en vivo en Google
+        tools: [{ googleSearch: {} }],
       }),
     });
 
@@ -79,7 +79,6 @@ Reglas:
     const candidateText =
       result?.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
 
-    // Limpiar bloques ```json ... ``` si la API los incluye
     const cleanJsonText = candidateText.replace(/```json|```/g, '').trim();
 
     let parsedData;
